@@ -5,6 +5,30 @@ const router = express.Router();
 
 router.use(authMiddleware);
 
+// Create transaction manually (no AI parsing)
+router.post('/', (req, res) => {
+  try {
+    const { property, address, city, state, county, price, contract_type, contract_date, closing_date } = req.body;
+    if (!property || !property.trim()) return res.status(400).json({ error: 'Property name is required' });
+
+    const result = prepare(
+      'INSERT INTO transactions (user_id, property, address, city, state, county, price, status, contract_date, closing_date, contract_type, raw_parsed_json) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)'
+    ).run(
+      req.user.id, property.trim(), address || '', city || '', state || '',
+      county || null, price || 0, 'Active', contract_date || null,
+      closing_date || null, contract_type || null, null
+    );
+    const txId = result.lastInsertRowid;
+
+    try {
+      prepare('INSERT INTO activity_log (transaction_id, user_id, action, detail) VALUES (?,?,?,?)').run(txId, req.user.id, 'transaction_created', 'Transaction created manually');
+    } catch(e) {}
+
+    const tx = getFullTransaction(txId, req.user.id);
+    res.json(tx);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 function getFullTransaction(id, userId) {
   const tx = prepare('SELECT * FROM transactions WHERE id = ? AND user_id = ?').get(id, userId);
   if (!tx) return null;

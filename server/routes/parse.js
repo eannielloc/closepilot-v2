@@ -67,7 +67,7 @@ router.post('/', upload.single('file'), async (req, res) => {
 
     // Guard against blank/empty documents
     if (text.length < 50) {
-      return res.status(422).json({ error: 'This document appears to be blank or contains too little text to parse. Please upload a contract with readable content.' });
+      return res.status(422).json({ error: "This document appears blank. Use 'Create Transaction' to start a transaction manually, then upload documents to it." });
     }
 
     let result;
