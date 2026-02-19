@@ -66,7 +66,9 @@ async function initDb() {
     `CREATE TABLE IF NOT EXISTS documents (id INTEGER PRIMARY KEY AUTOINCREMENT, transaction_id INTEGER NOT NULL, name TEXT NOT NULL, status TEXT DEFAULT 'Pending', file_path TEXT, file_size INTEGER, mime_type TEXT, uploaded_at TEXT, uploaded_by INTEGER, FOREIGN KEY (transaction_id) REFERENCES transactions(id))`,
     `CREATE TABLE IF NOT EXISTS contingencies (id INTEGER PRIMARY KEY AUTOINCREMENT, transaction_id INTEGER NOT NULL, name TEXT NOT NULL, FOREIGN KEY (transaction_id) REFERENCES transactions(id))`,
     `CREATE TABLE IF NOT EXISTS vendors (id INTEGER PRIMARY KEY AUTOINCREMENT, transaction_id INTEGER NOT NULL, type TEXT NOT NULL, name TEXT NOT NULL, email TEXT, phone TEXT, extra_json TEXT, FOREIGN KEY (transaction_id) REFERENCES transactions(id))`,
-    `CREATE TABLE IF NOT EXISTS document_signatures (id INTEGER PRIMARY KEY AUTOINCREMENT, document_id INTEGER NOT NULL, signer_name TEXT NOT NULL, signer_email TEXT NOT NULL, status TEXT DEFAULT 'pending', signed_at TEXT, ip_address TEXT, token TEXT UNIQUE NOT NULL, FOREIGN KEY (document_id) REFERENCES documents(id))`
+    `CREATE TABLE IF NOT EXISTS document_signatures (id INTEGER PRIMARY KEY AUTOINCREMENT, document_id INTEGER NOT NULL, signer_name TEXT NOT NULL, signer_email TEXT NOT NULL, status TEXT DEFAULT 'pending', signed_at TEXT, ip_address TEXT, token TEXT UNIQUE NOT NULL, signature_data TEXT, FOREIGN KEY (document_id) REFERENCES documents(id))`,
+    `CREATE TABLE IF NOT EXISTS activity_log (id INTEGER PRIMARY KEY AUTOINCREMENT, transaction_id INTEGER, user_id INTEGER, action TEXT NOT NULL, detail TEXT, created_at DATETIME DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY (transaction_id) REFERENCES transactions(id))`,
+    `CREATE TABLE IF NOT EXISTS notes (id INTEGER PRIMARY KEY AUTOINCREMENT, transaction_id INTEGER NOT NULL, user_id INTEGER NOT NULL, content TEXT NOT NULL, created_at DATETIME DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY (transaction_id) REFERENCES transactions(id), FOREIGN KEY (user_id) REFERENCES users(id))`
   ];
   tables.forEach(t => db.run(t));
 
@@ -76,6 +78,8 @@ async function initDb() {
   try { db.run('ALTER TABLE documents ADD COLUMN mime_type TEXT'); } catch(e) {}
   try { db.run('ALTER TABLE documents ADD COLUMN uploaded_at TEXT'); } catch(e) {}
   try { db.run('ALTER TABLE documents ADD COLUMN uploaded_by INTEGER'); } catch(e) {}
+  try { db.run('ALTER TABLE document_signatures ADD COLUMN signature_data TEXT'); } catch(e) {}
+  try { db.run('ALTER TABLE documents ADD COLUMN category TEXT'); } catch(e) {}
 
   const count = db.exec('SELECT COUNT(*) FROM users');
   const userCount = count[0]?.values[0]?.[0] || 0;

@@ -44,8 +44,13 @@ router.post('/transactions/:txId/documents/upload', authMiddleware, upload.singl
   }
 });
 
-// Download a document
-router.get('/documents/:id/download', authMiddleware, (req, res) => {
+// Download a document (supports token in query for new-tab downloads)
+router.get('/documents/:id/download', (req, res, next) => {
+  if (req.query.token) {
+    req.headers.authorization = `Bearer ${req.query.token}`;
+  }
+  authMiddleware(req, res, next);
+}, (req, res) => {
   const doc = prepare('SELECT d.*, t.user_id FROM documents d JOIN transactions t ON d.transaction_id = t.id WHERE d.id = ?').get(Number(req.params.id));
   if (!doc || doc.user_id !== req.user.id) return res.status(404).json({ error: 'Not found' });
   if (!doc.file_path || !fs.existsSync(doc.file_path)) return res.status(404).json({ error: 'File not found' });

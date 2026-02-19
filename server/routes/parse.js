@@ -9,14 +9,7 @@ const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 20 
 
 router.use(authMiddleware);
 
-router.post('/', upload.single('file'), async (req, res) => {
-  try {
-    if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
-
-    const pdfData = await pdf(req.file.buffer);
-    const text = pdfData.text;
-
-    const prompt = `You are a real estate contract parser. Extract the following from this contract text and return ONLY valid JSON (no markdown, no explanation):
+const PARSE_PROMPT = `You are a real estate contract parser. Extract the following from this contract text and return ONLY valid JSON (no markdown, no explanation):
 
 {
   "property": "property name/description",
@@ -36,21 +29,48 @@ router.post('/', upload.single('file'), async (req, res) => {
 }
 
 Contract text:
-${text.substring(0, 15000)}`;
+`;
 
-    const result = await new Promise((resolve, reject) => {
-      const proc = spawn('/Users/chriseanniello/.local/bin/claude', [
-        '--print', '--output-format', 'text', '--model', 'sonnet', '--max-turns', '1'
-      ], { timeout: 180000 });
+async function parseWithAnthropicAPI(text) {
+  const Anthropic = require('@anthropic-ai/sdk');
+  const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+  const message = await client.messages.create({
+    model: 'claude-sonnet-4-20250514',
+    max_tokens: 4096,
+    messages: [{ role: 'user', content: PARSE_PROMPT + text.substring(0, 15000) }],
+  });
+  return message.content[0].text;
+}
 
-      let stdout = '', stderr = '';
-      proc.stdout.on('data', d => stdout += d);
-      proc.stderr.on('data', d => stderr += d);
-      proc.on('close', code => code === 0 ? resolve(stdout) : reject(new Error(stderr || `Exit code ${code}`)));
-      proc.on('error', reject);
-      proc.stdin.write(prompt);
-      proc.stdin.end();
-    });
+async function parseWithClaudeCLI(text) {
+  return new Promise((resolve, reject) => {
+    const cliPath = process.env.CLAUDE_CLI_PATH || '/Users/chriseanniello/.local/bin/claude';
+    const proc = spawn(cliPath, [
+      '--print', '--output-format', 'text', '--model', 'sonnet', '--max-turns', '1'
+    ], { timeout: 180000 });
+    let stdout = '', stderr = '';
+    proc.stdout.on('data', d => stdout += d);
+    proc.stderr.on('data', d => stderr += d);
+    proc.on('close', code => code === 0 ? resolve(stdout) : reject(new Error(stderr || `Exit code ${code}`)));
+    proc.on('error', reject);
+    proc.stdin.write(PARSE_PROMPT + text.substring(0, 15000));
+    proc.stdin.end();
+  });
+}
+
+router.post('/', upload.single('file'), async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
+
+    const pdfData = await pdf(req.file.buffer);
+    const text = pdfData.text;
+
+    let result;
+    if (process.env.ANTHROPIC_API_KEY) {
+      result = await parseWithAnthropicAPI(text);
+    } else {
+      result = await parseWithClaudeCLI(text);
+    }
 
     // Extract JSON from response
     let parsed;
@@ -86,6 +106,11 @@ ${text.substring(0, 15000)}`;
     if (parsed.vendors) for (const v of parsed.vendors) {
       prepare('INSERT INTO vendors (transaction_id, type, name, email, phone) VALUES (?,?,?,?,?)').run(txId, v.type, v.name, v.email || null, v.phone || null);
     }
+
+    // Log activity
+    try {
+      prepare('INSERT INTO activity_log (transaction_id, user_id, action, detail) VALUES (?,?,?,?)').run(txId, req.user.id, 'contract_parsed', `Contract parsed via AI: ${parsed.property || 'Unknown'}`);
+    } catch(e) {}
 
     // Return full transaction
     const full = prepare('SELECT * FROM transactions WHERE id = ?').get(txId);

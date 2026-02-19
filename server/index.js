@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
+const { initDb } = require('./db');
 
 const app = express();
 app.use(cors());
@@ -23,4 +24,6 @@ app.get('*', (req, res) => {
 });
 
 const PORT = process.env.PORT || 3004;
-app.listen(PORT, () => console.log(`ClosePilot v2 running on http://localhost:${PORT}`));
+initDb().then(() => {
+  app.listen(PORT, () => console.log(`ClosePilot v2 running on http://localhost:${PORT}`));
+}).catch(err => { console.error('DB init failed:', err); process.exit(1); });

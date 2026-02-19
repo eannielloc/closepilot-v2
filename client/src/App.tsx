@@ -9,6 +9,7 @@ import TransactionDetail from './pages/TransactionDetail';
 import Upload from './pages/Upload';
 import Reminders from './pages/Reminders';
 import VendorComms from './pages/VendorComms';
+import SignDocument from './pages/SignDocument';
 
 export default function App() {
   return (
@@ -23,6 +24,7 @@ export default function App() {
         <Route path="/upload" element={<ProtectedRoute><Upload /></ProtectedRoute>} />
         <Route path="/reminders" element={<ProtectedRoute><Reminders /></ProtectedRoute>} />
         <Route path="/vendors" element={<ProtectedRoute><VendorComms /></ProtectedRoute>} />
+        <Route path="/sign/:token" element={<SignDocument />} />
       </Routes>
     </div>
   );

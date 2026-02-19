@@ -12,6 +12,7 @@
     "concurrently": "^8.2.2"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.77.0",
     "bcryptjs": "^2.4.3",
     "better-sqlite3": "^12.6.2",
     "cors": "^2.8.5",
