@@ -1,9 +1,17 @@
 const express = require('express');
 const PDFDocument = require('pdfkit');
+const jwt = require('jsonwebtoken');
 const { prepare } = require('../db');
-const { authMiddleware } = require('../auth');
+const { authMiddleware, SECRET } = require('../auth');
 const router = express.Router();
 
+// Support token via query param for PDF download in new tab
+router.use((req, res, next) => {
+  if (req.query.token && !req.headers.authorization) {
+    req.headers.authorization = `Bearer ${req.query.token}`;
+  }
+  next();
+});
 router.use(authMiddleware);
 
 router.get('/:id/export-pdf', (req, res) => {

@@ -408,6 +408,13 @@ export default function TransactionDetail() {
                     {shareCopied ? <Check size={14} /> : <Share2 size={14} />}
                     {shareCopied ? 'Copied!' : 'Share with Client'}
                   </button>
+                  <button onClick={() => {
+                    const token = localStorage.getItem('token');
+                    window.open(`/api/transactions/${id}/export-pdf?token=${token}`, '_blank');
+                  }}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-brand-500/20 text-brand-400 hover:bg-brand-500/30 transition text-xs font-medium" title="Export PDF">
+                    <FileDown size={14} /> Export PDF
+                  </button>
                 </div>
                 <div className="flex items-center gap-2 text-white/60 mt-1"><MapPin size={16} /> {tx.address}, {tx.city}, {tx.state}</div>
               </div>
