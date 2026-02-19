@@ -63,7 +63,12 @@ router.post('/', upload.single('file'), async (req, res) => {
     if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
 
     const pdfData = await pdf(req.file.buffer);
-    const text = pdfData.text;
+    const text = (pdfData.text || '').trim();
+
+    // Guard against blank/empty documents
+    if (text.length < 50) {
+      return res.status(422).json({ error: 'This document appears to be blank or contains too little text to parse. Please upload a contract with readable content.' });
+    }
 
     let result;
     if (process.env.ANTHROPIC_API_KEY) {
