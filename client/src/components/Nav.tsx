@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../lib/auth';
-import { Home, LayoutDashboard, Upload, Bell, Users, LogIn, LogOut, Menu, X, Settings } from 'lucide-react';
+import { Home, LayoutDashboard, Upload, Bell, Users, LogIn, LogOut, Menu, X, Settings, Kanban, BarChart3 } from 'lucide-react';
 
 export default function Nav() {
   const { user, logout } = useAuth();
@@ -11,6 +11,8 @@ export default function Nav() {
 
   const links = user ? [
     { to: '/dashboard', icon: <LayoutDashboard size={18} />, label: 'Dashboard' },
+    { to: '/pipeline', icon: <Kanban size={18} />, label: 'Pipeline' },
+    { to: '/analytics', icon: <BarChart3 size={18} />, label: 'Analytics' },
     { to: '/upload', icon: <Upload size={18} />, label: 'Upload' },
     { to: '/reminders', icon: <Bell size={18} />, label: 'Reminders' },
     { to: '/vendors', icon: <Users size={18} />, label: 'Vendors' },

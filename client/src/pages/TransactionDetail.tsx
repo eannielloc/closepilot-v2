@@ -66,6 +66,11 @@ export default function TransactionDetail() {
   // Template
   const [showTemplateModal, setShowTemplateModal] = useState(false);
 
+  // Commission
+  const [commRate, setCommRate] = useState('');
+  const [commSplit, setCommSplit] = useState('');
+  const [savingComm, setSavingComm] = useState(false);
+
   // Document category grouping
   const [groupByCategory, setGroupByCategory] = useState(false);
 
@@ -76,6 +81,8 @@ export default function TransactionDetail() {
   const reload = useCallback(async () => {
     const data = await api.get(`/transactions/${id}`);
     setTx(data);
+    setCommRate(data.commission_rate != null ? String(data.commission_rate) : '');
+    setCommSplit(data.commission_split || '');
     return data;
   }, [id]);
 
@@ -576,6 +583,57 @@ export default function TransactionDetail() {
               ))}
             </div>
           )}
+        </div>
+
+        {/* Commission */}
+        <div className="glass p-4 md:p-6">
+          <h2 className="font-semibold text-lg mb-4 flex items-center gap-2"><DollarSign size={20} /> Commission</h2>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <div>
+              <label className="text-white/40 text-xs block mb-1">Rate (%)</label>
+              <input type="number" step="0.1" min="0" max="100" value={commRate}
+                onChange={e => setCommRate(e.target.value)}
+                className="w-full bg-white/10 border border-white/10 rounded px-3 py-2 text-sm text-white focus:outline-none focus:border-brand-400"
+                placeholder="2.5" />
+            </div>
+            <div>
+              <label className="text-white/40 text-xs block mb-1">Commission Amount</label>
+              <div className="bg-white/5 rounded px-3 py-2 text-sm text-brand-400 font-semibold">
+                {commRate && tx.price ? formatCurrency(tx.price * parseFloat(commRate) / 100) : '—'}
+              </div>
+            </div>
+            <div>
+              <label className="text-white/40 text-xs block mb-1">Split</label>
+              <input type="text" value={commSplit} onChange={e => setCommSplit(e.target.value)}
+                className="w-full bg-white/10 border border-white/10 rounded px-3 py-2 text-sm text-white focus:outline-none focus:border-brand-400"
+                placeholder="50/50 with brokerage" />
+            </div>
+            <div>
+              <label className="text-white/40 text-xs block mb-1">Net After Split</label>
+              <div className="bg-white/5 rounded px-3 py-2 text-sm text-emerald-400 font-semibold">
+                {commRate && tx.price && commSplit ? (() => {
+                  const gross = tx.price * parseFloat(commRate) / 100;
+                  const match = commSplit.match(/(\d+)\s*\/\s*(\d+)/);
+                  if (match) return formatCurrency(gross * parseInt(match[1]) / (parseInt(match[1]) + parseInt(match[2])));
+                  return formatCurrency(gross);
+                })() : '—'}
+              </div>
+            </div>
+          </div>
+          <button
+            onClick={async () => {
+              setSavingComm(true);
+              try {
+                await api.patch(`/transactions/${tx.id}/commission`, { commission_rate: commRate || null, commission_split: commSplit || null });
+                success('Commission saved');
+              } catch (e: any) { showError(e.message); }
+              setSavingComm(false);
+            }}
+            className="mt-3 bg-brand-500/20 text-brand-300 hover:bg-brand-500/30 px-4 py-1.5 rounded text-sm transition"
+            disabled={savingComm}
+          >
+            {savingComm ? 'Saving...' : 'Save Commission'}
+          </button>
         </div>
 
         {/* Contingencies */}

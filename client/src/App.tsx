@@ -15,16 +15,20 @@ import Settings from './pages/Settings';
 import Pipeline from './pages/Pipeline';
 import Analytics from './pages/Analytics';
 import Portal from './pages/Portal';
+import Onboarding from './pages/Onboarding';
+import CommandPalette from './components/CommandPalette';
 
 export default function App() {
   return (
     <ToastProvider>
       <div className="min-h-screen bg-surface-900 text-white">
         <Nav />
+        <CommandPalette />
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
+          <Route path="/onboarding" element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />
           <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
           <Route path="/transactions/:id" element={<ProtectedRoute><TransactionDetail /></ProtectedRoute>} />
           <Route path="/upload" element={<ProtectedRoute><Upload /></ProtectedRoute>} />

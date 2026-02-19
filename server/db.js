@@ -85,6 +85,9 @@ async function initDb() {
   try { db.run('ALTER TABLE transactions ADD COLUMN commission_rate REAL'); } catch(e) {}
   try { db.run('ALTER TABLE transactions ADD COLUMN commission_amount REAL'); } catch(e) {}
   try { db.run('ALTER TABLE transactions ADD COLUMN commission_split TEXT'); } catch(e) {}
+  try { db.run('ALTER TABLE users ADD COLUMN onboarding_completed INTEGER DEFAULT 0'); } catch(e) {}
+  try { db.run('ALTER TABLE users ADD COLUMN phone TEXT'); } catch(e) {}
+  try { db.run('ALTER TABLE users ADD COLUMN license_number TEXT'); } catch(e) {}
 
   const count = db.exec('SELECT COUNT(*) FROM users');
   const userCount = count[0]?.values[0]?.[0] || 0;
