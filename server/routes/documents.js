@@ -37,6 +37,8 @@ router.post('/transactions/:txId/documents/upload', authMiddleware, upload.singl
       'INSERT INTO documents (transaction_id, name, status, file_path, file_size, mime_type, uploaded_at, uploaded_by) VALUES (?,?,?,?,?,?,?,?)'
     ).run(Number(txId), name, 'Received', file.path, file.size, file.mimetype, new Date().toISOString(), req.user.id);
 
+    // Log activity
+    try { prepare('INSERT INTO activity_log (transaction_id, user_id, action, detail) VALUES (?,?,?,?)').run(Number(txId), req.user.id, 'document_uploaded', `Uploaded: ${name}`); } catch(e) {}
     res.json({ id: result.lastInsertRowid, name, file_size: file.size, mime_type: file.mimetype });
   } catch (e) {
     console.error(e);
@@ -98,7 +100,17 @@ router.get('/documents/:id/signatures', authMiddleware, (req, res) => {
 router.get('/sign/:token', (req, res) => {
   const sig = prepare('SELECT s.*, d.name as doc_name, d.file_path, t.property, t.address FROM document_signatures s JOIN documents d ON s.document_id = d.id JOIN transactions t ON d.transaction_id = t.id WHERE s.token = ?').get(req.params.token);
   if (!sig) return res.status(404).json({ error: 'Invalid or expired signing link' });
-  res.json({ signer_name: sig.signer_name, signer_email: sig.signer_email, status: sig.status, signed_at: sig.signed_at, doc_name: sig.doc_name, property: sig.property, address: sig.address, has_file: !!sig.file_path });
+  res.json({ signer_name: sig.signer_name, signer_email: sig.signer_email, status: sig.status, signed_at: sig.signed_at, doc_name: sig.doc_name, property: sig.property, address: sig.address, has_file: !!sig.file_path, document_id: sig.document_id });
+});
+
+// Public: download PDF for signing
+router.get('/sign/:token/pdf', (req, res) => {
+  const sig = prepare('SELECT s.*, d.file_path, d.name as doc_name FROM document_signatures s JOIN documents d ON s.document_id = d.id WHERE s.token = ?').get(req.params.token);
+  if (!sig) return res.status(404).json({ error: 'Invalid signing link' });
+  if (!sig.file_path || !fs.existsSync(sig.file_path)) return res.status(404).json({ error: 'No file available' });
+  res.setHeader('Content-Type', 'application/pdf');
+  res.setHeader('Content-Disposition', `inline; filename="${sig.doc_name}"`);
+  fs.createReadStream(sig.file_path).pipe(res);
 });
 
 // Public: submit signature
@@ -108,7 +120,13 @@ router.post('/sign/:token', (req, res) => {
   if (sig.status === 'signed') return res.status(400).json({ error: 'Already signed' });
 
   const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
-  prepare('UPDATE document_signatures SET status = ?, signed_at = ?, ip_address = ? WHERE id = ?').run('signed', new Date().toISOString(), String(ip), sig.id);
+  const { signature_data } = req.body || {};
+  prepare('UPDATE document_signatures SET status = ?, signed_at = ?, ip_address = ?, signature_data = ? WHERE id = ?').run('signed', new Date().toISOString(), String(ip), signature_data || null, sig.id);
+  // Log activity
+  try {
+    const doc = prepare('SELECT transaction_id FROM documents WHERE id = ?').get(sig.document_id);
+    if (doc) prepare('INSERT INTO activity_log (transaction_id, user_id, action, detail) VALUES (?,?,?,?)').run(doc.transaction_id, null, 'document_signed', `Signed by ${sig.signer_name}`);
+  } catch(e) {}
   res.json({ ok: true });
 });
 

@@ -13,6 +13,8 @@ app.use('/api/transactions', require('./routes/transactions'));
 app.use('/api/parse', require('./routes/parse'));
 app.use('/api/reminders', require('./routes/reminders'));
 app.use('/api', require('./routes/documents'));
+app.use('/api', require('./routes/activity'));
+app.use('/api', require('./routes/notes'));
 
 // Serve static in production
 const clientDist = path.join(__dirname, '..', 'client', 'dist');
