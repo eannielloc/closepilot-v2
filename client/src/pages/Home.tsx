@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { FileText, Clock, Users, PenTool, DollarSign, LayoutGrid, Check, ChevronDown, Star, Zap, ArrowRight, Shield } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
+import { usePageTitle } from '../lib/usePageTitle';
 
 function useReveal() {
   const ref = useRef<HTMLDivElement>(null);
@@ -66,6 +67,7 @@ function FAQ({ q, a }: { q: string; a: string }) {
 }
 
 export default function Home() {
+  usePageTitle('AI Transaction Coordinator for Real Estate');
   const hero = useReveal();
   const social = useReveal();
   const feat = useReveal();

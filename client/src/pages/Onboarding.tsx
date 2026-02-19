@@ -2,11 +2,13 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../lib/auth';
 import { api } from '../lib/api';
+import { usePageTitle } from '../lib/usePageTitle';
 import { User, Building, Phone, Award, FileText, Upload, PartyPopper, ArrowRight, ArrowLeft, Check } from 'lucide-react';
 
 const STEPS = ['Profile', 'First Transaction', 'All Set!'];
 
 export default function Onboarding() {
+  usePageTitle('Get Started');
   const { user } = useAuth();
   const navigate = useNavigate();
   const [step, setStep] = useState(0);

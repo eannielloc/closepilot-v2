@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../lib/auth';
 import { api } from '../lib/api';
+import { usePageTitle } from '../lib/usePageTitle';
 import { useToast } from '../components/Toast';
 import { User, Building, Save } from 'lucide-react';
 
 export default function Settings() {
+  usePageTitle('Settings');
   const { user } = useAuth();
   const { success, error: showError } = useToast();
   const [name, setName] = useState(user?.name || '');

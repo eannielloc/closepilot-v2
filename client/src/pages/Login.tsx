@@ -1,9 +1,11 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../lib/auth';
+import { usePageTitle } from '../lib/usePageTitle';
 import { LogIn } from 'lucide-react';
 
 export default function Login() {
+  usePageTitle('Sign In');
   const [email, setEmail] = useState('demo@closepilot.ai');
   const [password, setPassword] = useState('demo123');
   const [error, setError] = useState('');

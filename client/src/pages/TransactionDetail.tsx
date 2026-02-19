@@ -1,14 +1,16 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { api } from '../lib/api';
+import { usePageTitle } from '../lib/usePageTitle';
 import { formatCurrency, formatDate, daysUntil } from '../lib/utils';
 import { useToast } from '../components/Toast';
 import { DetailSkeleton, EmptyState } from '../components/Skeleton';
 import { CHECKLIST_TEMPLATES } from '../lib/templates';
+import ConfirmDialog from '../components/ConfirmDialog';
 import {
   ArrowLeft, MapPin, DollarSign, Calendar, Users, FileText, AlertTriangle, Wrench,
   CheckCircle, Circle, Upload, Download, Trash2, Send, X, MessageSquare, Clock,
-  Plus, Edit3, Save, ChevronDown, ChevronRight, ListChecks, FolderOpen, Share2, Copy, Check, FileDown, MousePointerClick
+  Plus, Edit3, Save, ChevronDown, ChevronRight, ListChecks, FolderOpen, Share2, Copy, Check, FileDown, CheckSquare, Square
 } from 'lucide-react';
 
 function formatBytes(bytes: number) {
@@ -78,6 +80,19 @@ export default function TransactionDetail() {
   const [shareLoading, setShareLoading] = useState(false);
   const [shareCopied, setShareCopied] = useState(false);
 
+  // Confirmation dialogs
+  const [confirmDelete, setConfirmDelete] = useState<{ type: string; id: number; name: string } | null>(null);
+
+  // Inline document rename
+  const [renamingDocId, setRenamingDocId] = useState<number | null>(null);
+  const [renameValue, setRenameValue] = useState('');
+
+  // Bulk document selection
+  const [selectedDocs, setSelectedDocs] = useState<Set<number>>(new Set());
+  const [bulkMode, setBulkMode] = useState(false);
+
+  usePageTitle(tx?.property || 'Transaction');
+
   const reload = useCallback(async () => {
     const data = await api.get(`/transactions/${id}`);
     setTx(data);
@@ -121,6 +136,16 @@ export default function TransactionDetail() {
     reload();
   };
 
+  const renameDoc = async (docId: number) => {
+    if (!renameValue.trim()) { setRenamingDocId(null); return; }
+    try {
+      await api.patch(`/transactions/documents/${docId}`, { name: renameValue.trim() });
+      await reload();
+      success('Document renamed');
+    } catch (e: any) { showError(e.message); }
+    setRenamingDocId(null);
+  };
+
   const handleUpload = async (files: FileList | null) => {
     if (!files || !files.length) return;
     setUploading(true);
@@ -137,14 +162,75 @@ export default function TransactionDetail() {
       showError(e.message);
     } finally {
       setUploading(false);
+      if (fileRef.current) fileRef.current.value = '';
     }
   };
 
-  const handleDelete = async (docId: number) => {
-    if (!confirm('Delete this document?')) return;
-    await api.delete(`/documents/${docId}`);
-    reload();
-    success('Document deleted');
+  const handleDeleteConfirmed = async () => {
+    if (!confirmDelete) return;
+    const { type, id: itemId } = confirmDelete;
+    try {
+      if (type === 'document') {
+        await api.delete(`/documents/${itemId}`);
+        success('Document deleted');
+      } else if (type === 'party') {
+        await api.delete(`/transactions/parties/${itemId}`);
+        success('Party removed');
+      } else if (type === 'milestone') {
+        await api.delete(`/transactions/milestones/${itemId}`);
+        success('Milestone removed');
+      } else if (type === 'note') {
+        await api.delete(`/notes/${itemId}`);
+        setNotes(prev => prev.filter(n => n.id !== itemId));
+      }
+      reload();
+    } catch (e: any) { showError(e.message); }
+    setConfirmDelete(null);
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedDocs.size === 0) return;
+    try {
+      for (const docId of selectedDocs) {
+        await api.delete(`/documents/${docId}`);
+      }
+      await reload();
+      success(`${selectedDocs.size} document(s) deleted`);
+      setSelectedDocs(new Set());
+      setBulkMode(false);
+    } catch (e: any) { showError(e.message); }
+  };
+
+  const handleBulkStatusChange = async (status: string) => {
+    if (selectedDocs.size === 0) return;
+    try {
+      for (const docId of selectedDocs) {
+        await api.patch(`/transactions/documents/${docId}`, { status });
+      }
+      await reload();
+      success(`${selectedDocs.size} document(s) updated to ${status}`);
+      setSelectedDocs(new Set());
+    } catch (e: any) { showError(e.message); }
+  };
+
+  const handleBulkCategoryChange = async (category: string) => {
+    if (selectedDocs.size === 0) return;
+    try {
+      for (const docId of selectedDocs) {
+        await api.patch(`/transactions/documents/${docId}`, { category });
+      }
+      await reload();
+      success(`${selectedDocs.size} document(s) categorized as ${category}`);
+      setSelectedDocs(new Set());
+    } catch (e: any) { showError(e.message); }
+  };
+
+  const toggleDocSelection = (docId: number) => {
+    setSelectedDocs(prev => {
+      const next = new Set(prev);
+      if (next.has(docId)) next.delete(docId); else next.add(docId);
+      return next;
+    });
   };
 
   const handleDownload = (docId: number) => {
@@ -219,13 +305,9 @@ export default function TransactionDetail() {
     }
   };
 
-  const deleteNote = async (noteId: number) => {
-    await api.delete(`/notes/${noteId}`);
-    setNotes(prev => prev.filter(n => n.id !== noteId));
-  };
-
   const addParty = async () => {
     if (!newParty.name) return showError('Name is required');
+    if (newParty.email && !/\S+@\S+\.\S+/.test(newParty.email)) return showError('Invalid email address');
     try {
       await api.post(`/transactions/${id}/parties`, newParty);
       await reload();
@@ -233,12 +315,6 @@ export default function TransactionDetail() {
       setNewParty({ role: 'Buyer', name: '', email: '', phone: '', firm: '' });
       success('Party added');
     } catch (e: any) { showError(e.message); }
-  };
-
-  const deleteParty = async (partyId: number) => {
-    if (!confirm('Remove this party?')) return;
-    await api.delete(`/transactions/parties/${partyId}`);
-    reload();
   };
 
   const addMilestoneHandler = async () => {
@@ -250,12 +326,6 @@ export default function TransactionDetail() {
       setNewMilestone({ label: '', date: '', category: 'Contract' });
       success('Milestone added');
     } catch (e: any) { showError(e.message); }
-  };
-
-  const deleteMilestone = async (msId: number) => {
-    if (!confirm('Remove this milestone?')) return;
-    await api.delete(`/transactions/milestones/${msId}`);
-    reload();
   };
 
   const applyTemplate = async (template: typeof CHECKLIST_TEMPLATES[0]) => {
@@ -306,13 +376,34 @@ export default function TransactionDetail() {
 
   const renderDoc = (d: any) => {
     const docSigs = signatures[d.id] || [];
+    const isRenaming = renamingDocId === d.id;
+    const isSelected = selectedDocs.has(d.id);
+
     return (
-      <div key={d.id} className="bg-white/5 rounded-lg p-3 text-sm">
+      <div key={d.id} className={`bg-white/5 rounded-lg p-3 text-sm transition ${isSelected ? 'ring-1 ring-brand-400/50 bg-brand-500/10' : ''}`}>
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-3 min-w-0">
+            {bulkMode && (
+              <button onClick={() => toggleDocSelection(d.id)} className="flex-shrink-0" aria-label={isSelected ? 'Deselect document' : 'Select document'}>
+                {isSelected ? <CheckSquare size={16} className="text-brand-400" /> : <Square size={16} className="text-white/30 hover:text-white/60 transition" />}
+              </button>
+            )}
             <FileText size={16} className="text-white/40 flex-shrink-0" />
             <div className="min-w-0">
-              <div className="truncate">{d.name}</div>
+              {isRenaming ? (
+                <input
+                  autoFocus
+                  value={renameValue}
+                  onChange={e => setRenameValue(e.target.value)}
+                  onBlur={() => renameDoc(d.id)}
+                  onKeyDown={e => { if (e.key === 'Enter') renameDoc(d.id); if (e.key === 'Escape') setRenamingDocId(null); }}
+                  className="bg-white/10 border border-brand-400 rounded px-2 py-0.5 text-sm text-white focus:outline-none w-full"
+                />
+              ) : (
+                <div className="truncate cursor-pointer hover:text-brand-400 transition" onClick={() => { setRenamingDocId(d.id); setRenameValue(d.name); }} title="Click to rename">
+                  {d.name}
+                </div>
+              )}
               <div className="text-white/30 text-xs">
                 {d.file_size ? formatBytes(d.file_size) : 'No file'}{d.uploaded_at ? ` · ${formatDate(d.uploaded_at)}` : ''}
               </div>
@@ -320,32 +411,27 @@ export default function TransactionDetail() {
           </div>
           <div className="flex items-center gap-1.5 flex-shrink-0 flex-wrap justify-end">
             <select value={d.category || ''} onChange={e => updateDocCategory(d.id, e.target.value)}
-              className="bg-white/10 border border-white/10 rounded px-1.5 py-1 text-xs text-white focus:outline-none max-w-[80px]">
+              className="bg-white/10 border border-white/10 rounded px-1.5 py-1 text-xs text-white focus:outline-none max-w-[80px]" aria-label="Document category">
               <option value="">No category</option>
               {DOC_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
             </select>
             <select value={d.status} onChange={e => updateDocStatus(d.id, e.target.value)}
-              className="bg-white/10 border border-white/10 rounded px-1.5 py-1 text-xs text-white focus:outline-none">
+              className="bg-white/10 border border-white/10 rounded px-1.5 py-1 text-xs text-white focus:outline-none" aria-label="Document status">
               <option value="Pending">Pending</option>
               <option value="Received">Received</option>
               <option value="Missing">Missing</option>
             </select>
             {d.file_path && (
-              <button onClick={() => handleDownload(d.id)} className="p-1.5 rounded hover:bg-white/10 text-white/50 hover:text-white transition" title="Download">
+              <button onClick={() => handleDownload(d.id)} className="p-1.5 rounded hover:bg-white/10 text-white/50 hover:text-white transition" title="Download" aria-label="Download document">
                 <Download size={14} />
               </button>
             )}
-            {d.file_path && (
-              <Link to={`/documents/${d.id}/prepare`}
-                className="p-1.5 rounded hover:bg-white/10 text-white/50 hover:text-accent-400 transition" title="Prepare for Signing">
-                <MousePointerClick size={14} />
-              </Link>
-            )}
             <button onClick={() => { setSigModal({ docId: d.id, docName: d.name }); setSigners([{ name: '', email: '' }]); }}
-              className="p-1.5 rounded hover:bg-white/10 text-white/50 hover:text-brand-400 transition" title="Send for Signature">
+              className="p-1.5 rounded hover:bg-white/10 text-white/50 hover:text-brand-400 transition" title="Send for Signature" aria-label="Send for signature">
               <Send size={14} />
             </button>
-            <button onClick={() => handleDelete(d.id)} className="p-1.5 rounded hover:bg-white/10 text-white/50 hover:text-red-400 transition" title="Delete">
+            <button onClick={() => setConfirmDelete({ type: 'document', id: d.id, name: d.name })}
+              className="p-1.5 rounded hover:bg-white/10 text-white/50 hover:text-red-400 transition" title="Delete" aria-label="Delete document">
               <Trash2 size={14} />
             </button>
           </div>
@@ -375,15 +461,15 @@ export default function TransactionDetail() {
           <div className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <input value={editData.property} onChange={e => setEditData({...editData, property: e.target.value})}
-                className="bg-white/10 border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-brand-400" placeholder="Property" />
+                className="bg-white/10 border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-brand-400" placeholder="Property" />
               <input value={editData.address} onChange={e => setEditData({...editData, address: e.target.value})}
-                className="bg-white/10 border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-brand-400" placeholder="Address" />
+                className="bg-white/10 border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-brand-400" placeholder="Address" />
               <input value={editData.city} onChange={e => setEditData({...editData, city: e.target.value})}
-                className="bg-white/10 border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-brand-400" placeholder="City" />
+                className="bg-white/10 border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-brand-400" placeholder="City" />
               <input value={editData.state} onChange={e => setEditData({...editData, state: e.target.value})}
-                className="bg-white/10 border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-brand-400" placeholder="State" />
+                className="bg-white/10 border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-brand-400" placeholder="State" />
               <input type="number" value={editData.price} onChange={e => setEditData({...editData, price: +e.target.value})}
-                className="bg-white/10 border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-brand-400" placeholder="Price" />
+                className="bg-white/10 border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-brand-400" placeholder="Price" />
               <select value={editData.status} onChange={e => setEditData({...editData, status: e.target.value})}
                 className="bg-white/10 border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:outline-none">
                 <option value="Active">Active</option>
@@ -391,9 +477,9 @@ export default function TransactionDetail() {
                 <option value="Closed">Closed</option>
               </select>
               <input type="date" value={editData.contract_date || ''} onChange={e => setEditData({...editData, contract_date: e.target.value})}
-                className="bg-white/10 border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-brand-400" />
+                className="bg-white/10 border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-brand-400" />
               <input type="date" value={editData.closing_date || ''} onChange={e => setEditData({...editData, closing_date: e.target.value})}
-                className="bg-white/10 border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-brand-400" />
+                className="bg-white/10 border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-brand-400" />
             </div>
             <div className="flex gap-2">
               <button onClick={saveEdit} className="btn-brand flex items-center gap-2 text-sm"><Save size={14} /> Save</button>
@@ -402,13 +488,16 @@ export default function TransactionDetail() {
           </div>
         ) : (
           <>
-            <div className="flex items-start justify-between">
-              <div>
-                <div className="flex items-center gap-3">
-                  <h1 className="text-2xl md:text-3xl font-bold">{tx.property}</h1>
-                  <button onClick={startEditing} className="p-1.5 rounded hover:bg-white/10 text-white/40 hover:text-white transition" title="Edit">
+            <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
+              <div className="min-w-0">
+                <div className="flex items-center gap-3 flex-wrap">
+                  <h1 className="text-2xl md:text-3xl font-bold truncate">{tx.property}</h1>
+                  <button onClick={startEditing} className="p-1.5 rounded hover:bg-white/10 text-white/40 hover:text-white transition" title="Edit" aria-label="Edit transaction">
                     <Edit3 size={16} />
                   </button>
+                </div>
+                <div className="flex items-center gap-2 text-white/60 mt-1"><MapPin size={16} className="flex-shrink-0" /> <span className="truncate">{tx.address}, {tx.city}, {tx.state}</span></div>
+                <div className="flex items-center gap-2 mt-3 flex-wrap">
                   <button onClick={shareWithClient} disabled={shareLoading}
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-accent-500/20 text-accent-400 hover:bg-accent-500/30 transition text-xs font-medium" title="Share with client">
                     {shareCopied ? <Check size={14} /> : <Share2 size={14} />}
@@ -422,9 +511,8 @@ export default function TransactionDetail() {
                     <FileDown size={14} /> Export PDF
                   </button>
                 </div>
-                <div className="flex items-center gap-2 text-white/60 mt-1"><MapPin size={16} /> {tx.address}, {tx.city}, {tx.state}</div>
               </div>
-              <div className="text-right">
+              <div className="text-right flex-shrink-0">
                 <div className="text-xl md:text-2xl font-bold text-brand-400">{formatCurrency(tx.price)}</div>
                 {days !== null && <div className={`text-sm mt-1 ${days <= 7 ? 'text-orange-400' : 'text-white/50'}`}>{days > 0 ? `${days} days to closing` : days === 0 ? 'Closing today!' : 'Closed'}</div>}
               </div>
@@ -448,10 +536,10 @@ export default function TransactionDetail() {
           <div className="flex items-center justify-between mb-4">
             <h2 className="font-semibold text-lg flex items-center gap-2"><Calendar size={20} /> Milestones</h2>
             <div className="flex gap-1">
-              <button onClick={() => setShowTemplateModal(true)} className="p-1.5 rounded hover:bg-white/10 text-white/40 hover:text-brand-400 transition" title="Apply template">
+              <button onClick={() => setShowTemplateModal(true)} className="p-1.5 rounded hover:bg-white/10 text-white/40 hover:text-brand-400 transition" title="Apply template" aria-label="Apply template">
                 <ListChecks size={16} />
               </button>
-              <button onClick={() => setAddMilestoneModal(true)} className="p-1.5 rounded hover:bg-white/10 text-white/40 hover:text-accent-400 transition" title="Add milestone">
+              <button onClick={() => setAddMilestoneModal(true)} className="p-1.5 rounded hover:bg-white/10 text-white/40 hover:text-accent-400 transition" title="Add milestone" aria-label="Add milestone">
                 <Plus size={16} />
               </button>
             </div>
@@ -462,13 +550,13 @@ export default function TransactionDetail() {
             )}
             {(tx.milestones || []).map((m: any) => (
               <div key={m.id} className="flex items-center gap-3 bg-white/5 rounded-lg p-3 text-sm group">
-                <button onClick={() => toggleMilestone(m.id)} className="flex-shrink-0">
+                <button onClick={() => toggleMilestone(m.id)} className="flex-shrink-0" aria-label={m.completed ? 'Mark incomplete' : 'Mark complete'}>
                   {m.completed ? <CheckCircle size={18} className="text-accent-400" /> : <Circle size={18} className="text-white/30 hover:text-white/60 transition" />}
                 </button>
                 <span className={`flex-1 ${m.completed ? 'line-through text-white/40' : ''}`}>{m.label}</span>
-                <span className="text-white/40 text-xs">{formatDate(m.date)}</span>
-                {m.category && <span className={`text-xs px-2 py-0.5 rounded-full ${categoryColors[m.category] || 'bg-white/10 text-white/50'}`}>{m.category}</span>}
-                <button onClick={() => deleteMilestone(m.id)} className="opacity-0 group-hover:opacity-100 text-white/30 hover:text-red-400 transition">
+                <span className="text-white/40 text-xs hidden sm:inline">{formatDate(m.date)}</span>
+                {m.category && <span className={`text-xs px-2 py-0.5 rounded-full hidden sm:inline ${categoryColors[m.category] || 'bg-white/10 text-white/50'}`}>{m.category}</span>}
+                <button onClick={() => setConfirmDelete({ type: 'milestone', id: m.id, name: m.label })} className="opacity-0 group-hover:opacity-100 text-white/30 hover:text-red-400 transition" aria-label="Delete milestone">
                   <Trash2 size={12} />
                 </button>
               </div>
@@ -480,7 +568,7 @@ export default function TransactionDetail() {
         <div className="glass p-4 md:p-6">
           <div className="flex items-center justify-between mb-4">
             <h2 className="font-semibold text-lg flex items-center gap-2"><Users size={20} /> Parties</h2>
-            <button onClick={() => setAddPartyModal(true)} className="p-1.5 rounded hover:bg-white/10 text-white/40 hover:text-accent-400 transition" title="Add party">
+            <button onClick={() => setAddPartyModal(true)} className="p-1.5 rounded hover:bg-white/10 text-white/40 hover:text-accent-400 transition" title="Add party" aria-label="Add party">
               <Plus size={16} />
             </button>
           </div>
@@ -489,10 +577,10 @@ export default function TransactionDetail() {
             {(tx.parties || []).map((p: any) => (
               <div key={p.id} className="bg-white/5 rounded-lg p-3 text-sm group">
                 <div className="flex justify-between">
-                  <span><span className="text-brand-400 font-medium">{p.role}</span> — {p.name}</span>
-                  <div className="flex items-center gap-2">
-                    {p.firm && <span className="text-white/40">{p.firm}</span>}
-                    <button onClick={() => deleteParty(p.id)} className="opacity-0 group-hover:opacity-100 text-white/30 hover:text-red-400 transition">
+                  <span className="truncate"><span className="text-brand-400 font-medium">{p.role}</span> — {p.name}</span>
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    {p.firm && <span className="text-white/40 hidden sm:inline">{p.firm}</span>}
+                    <button onClick={() => setConfirmDelete({ type: 'party', id: p.id, name: p.name })} className="opacity-0 group-hover:opacity-100 text-white/30 hover:text-red-400 transition" aria-label="Remove party">
                       <Trash2 size={12} />
                     </button>
                   </div>
@@ -505,12 +593,36 @@ export default function TransactionDetail() {
 
         {/* Documents */}
         <div className="glass p-4 md:p-6 lg:col-span-2">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="font-semibold text-lg flex items-center gap-2"><FileText size={20} /> Documents</h2>
-            <button onClick={() => setGroupByCategory(!groupByCategory)}
-              className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full transition ${groupByCategory ? 'bg-brand-500/20 text-brand-300' : 'bg-white/5 text-white/50 hover:bg-white/10'}`}>
-              <FolderOpen size={12} /> {groupByCategory ? 'Grouped' : 'Group by category'}
-            </button>
+          <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
+            <h2 className="font-semibold text-lg flex items-center gap-2"><FileText size={20} /> Documents ({(tx.documents || []).length})</h2>
+            <div className="flex items-center gap-2">
+              {bulkMode && selectedDocs.size > 0 && (
+                <div className="flex items-center gap-1.5 text-xs">
+                  <span className="text-white/50">{selectedDocs.size} selected</span>
+                  <select onChange={e => { if (e.target.value) handleBulkStatusChange(e.target.value); e.target.value = ''; }}
+                    className="bg-white/10 border border-white/10 rounded px-2 py-1 text-xs text-white focus:outline-none" defaultValue="">
+                    <option value="" disabled>Status...</option>
+                    <option value="Pending">Pending</option>
+                    <option value="Received">Received</option>
+                    <option value="Missing">Missing</option>
+                  </select>
+                  <select onChange={e => { if (e.target.value) handleBulkCategoryChange(e.target.value); e.target.value = ''; }}
+                    className="bg-white/10 border border-white/10 rounded px-2 py-1 text-xs text-white focus:outline-none" defaultValue="">
+                    <option value="" disabled>Category...</option>
+                    {DOC_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                  </select>
+                  <button onClick={handleBulkDelete} className="px-2 py-1 rounded bg-red-500/20 text-red-400 hover:bg-red-500/30 transition text-xs">Delete</button>
+                </div>
+              )}
+              <button onClick={() => { setBulkMode(!bulkMode); setSelectedDocs(new Set()); }}
+                className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full transition ${bulkMode ? 'bg-brand-500/20 text-brand-300' : 'bg-white/5 text-white/50 hover:bg-white/10'}`}>
+                <CheckSquare size={12} /> {bulkMode ? 'Done' : 'Select'}
+              </button>
+              <button onClick={() => setGroupByCategory(!groupByCategory)}
+                className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full transition ${groupByCategory ? 'bg-brand-500/20 text-brand-300' : 'bg-white/5 text-white/50 hover:bg-white/10'}`}>
+                <FolderOpen size={12} /> {groupByCategory ? 'Grouped' : 'Group'}
+              </button>
+            </div>
           </div>
 
           {/* Upload area */}
@@ -520,9 +632,11 @@ export default function TransactionDetail() {
             onDragLeave={() => setDragOver(false)}
             onDrop={onDrop}
             onClick={() => fileRef.current?.click()}
+            role="button"
+            aria-label="Upload documents"
           >
             <Upload size={24} className="mx-auto mb-2 text-white/40" />
-            <p className="text-white/50 text-sm">{uploading ? 'Uploading...' : 'Drag & drop files or click to upload'}</p>
+            <p className="text-white/50 text-sm">{uploading ? 'Uploading...' : 'Drag & drop files or click to upload (multiple supported)'}</p>
             <input ref={fileRef} type="file" multiple className="hidden" onChange={e => handleUpload(e.target.files)} />
           </div>
 
@@ -540,7 +654,7 @@ export default function TransactionDetail() {
           ) : (
             <div className="space-y-2">{(tx.documents || []).map(renderDoc)}</div>
           )}
-          {(tx.documents || []).length === 0 && <div className="text-white/30 text-sm text-center py-4">No documents yet</div>}
+          {(tx.documents || []).length === 0 && <div className="text-white/30 text-sm text-center py-4">No documents yet — upload files above</div>}
         </div>
 
         {/* Notes */}
@@ -555,16 +669,17 @@ export default function TransactionDetail() {
                 <input value={newNote} onChange={e => setNewNote(e.target.value)}
                   onKeyDown={e => e.key === 'Enter' && addNote()}
                   placeholder="Add a note..."
-                  className="flex-1 bg-white/10 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-white/30 focus:outline-none focus:border-brand-400 transition" />
+                  className="flex-1 bg-white/10 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-brand-400 transition"
+                  aria-label="Add note" />
                 <button onClick={addNote} disabled={!newNote.trim()} className="btn-brand py-2 px-4 text-sm disabled:opacity-40">Add</button>
               </div>
               <div className="space-y-2 max-h-64 overflow-y-auto">
-                {notes.length === 0 && <div className="text-white/30 text-sm text-center py-4">No notes yet</div>}
+                {notes.length === 0 && <div className="text-white/30 text-sm text-center py-4">No notes yet — add one above</div>}
                 {notes.map((n: any) => (
                   <div key={n.id} className="bg-white/5 rounded-lg p-3 text-sm group">
                     <div className="flex items-start justify-between">
                       <p className="text-white/80 whitespace-pre-wrap">{n.content}</p>
-                      <button onClick={() => deleteNote(n.id)} className="opacity-0 group-hover:opacity-100 text-white/30 hover:text-red-400 transition ml-2 flex-shrink-0">
+                      <button onClick={() => setConfirmDelete({ type: 'note', id: n.id, name: 'this note' })} className="opacity-0 group-hover:opacity-100 text-white/30 hover:text-red-400 transition ml-2 flex-shrink-0" aria-label="Delete note">
                         <Trash2 size={12} />
                       </button>
                     </div>
@@ -587,9 +702,9 @@ export default function TransactionDetail() {
               {activity.length === 0 && <div className="text-white/30 text-sm text-center py-4">No activity yet</div>}
               {activity.map((a: any) => (
                 <div key={a.id} className="flex items-start gap-3 bg-white/5 rounded-lg p-3 text-sm">
-                  <div className="flex-1">
+                  <div className="flex-1 min-w-0">
                     <div className="text-white/70">{ACTION_LABELS[a.action] || a.action}</div>
-                    {a.detail && <div className="text-white/40 text-xs mt-0.5">{a.detail}</div>}
+                    {a.detail && <div className="text-white/40 text-xs mt-0.5 truncate">{a.detail}</div>}
                   </div>
                   <span className="text-white/30 text-xs whitespace-nowrap">{a.created_at ? new Date(a.created_at).toLocaleString() : ''}</span>
                 </div>
@@ -606,7 +721,7 @@ export default function TransactionDetail() {
               <label className="text-white/40 text-xs block mb-1">Rate (%)</label>
               <input type="number" step="0.1" min="0" max="100" value={commRate}
                 onChange={e => setCommRate(e.target.value)}
-                className="w-full bg-white/10 border border-white/10 rounded px-3 py-2 text-sm text-white focus:outline-none focus:border-brand-400"
+                className="w-full bg-white/10 border border-white/10 rounded px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-brand-400"
                 placeholder="2.5" />
             </div>
             <div>
@@ -618,7 +733,7 @@ export default function TransactionDetail() {
             <div>
               <label className="text-white/40 text-xs block mb-1">Split</label>
               <input type="text" value={commSplit} onChange={e => setCommSplit(e.target.value)}
-                className="w-full bg-white/10 border border-white/10 rounded px-3 py-2 text-sm text-white focus:outline-none focus:border-brand-400"
+                className="w-full bg-white/10 border border-white/10 rounded px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-brand-400"
                 placeholder="50/50 with brokerage" />
             </div>
             <div>
@@ -677,6 +792,17 @@ export default function TransactionDetail() {
         )}
       </div>
 
+      {/* Confirm Delete Dialog */}
+      <ConfirmDialog
+        open={!!confirmDelete}
+        title={`Delete ${confirmDelete?.type || ''}?`}
+        message={`Are you sure you want to delete "${confirmDelete?.name}"? This action cannot be undone.`}
+        confirmLabel="Delete"
+        variant="danger"
+        onConfirm={handleDeleteConfirmed}
+        onCancel={() => setConfirmDelete(null)}
+      />
+
       {/* Modals */}
 
       {/* Signature Modal */}
@@ -687,9 +813,9 @@ export default function TransactionDetail() {
           {signers.map((s, i) => (
             <div key={i} className="flex gap-2">
               <input placeholder="Name" value={s.name} onChange={e => { const n = [...signers]; n[i].name = e.target.value; setSigners(n); }}
-                className="flex-1 bg-white/10 border border-white/10 rounded px-3 py-2 text-sm text-white placeholder-white/30 focus:outline-none focus:border-brand-400" />
-              <input placeholder="Email" value={s.email} onChange={e => { const n = [...signers]; n[i].email = e.target.value; setSigners(n); }}
-                className="flex-1 bg-white/10 border border-white/10 rounded px-3 py-2 text-sm text-white placeholder-white/30 focus:outline-none focus:border-brand-400" />
+                className="flex-1 bg-white/10 border border-white/10 rounded px-3 py-2 text-sm text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-brand-400" />
+              <input placeholder="Email" type="email" value={s.email} onChange={e => { const n = [...signers]; n[i].email = e.target.value; setSigners(n); }}
+                className="flex-1 bg-white/10 border border-white/10 rounded px-3 py-2 text-sm text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-brand-400" />
               {signers.length > 1 && (
                 <button onClick={() => setSigners(signers.filter((_, j) => j !== i))} className="text-white/30 hover:text-red-400"><X size={16} /></button>
               )}
@@ -708,16 +834,16 @@ export default function TransactionDetail() {
           <h3 className="font-semibold text-lg">Add Party</h3>
           <select value={newParty.role} onChange={e => setNewParty({...newParty, role: e.target.value})}
             className="w-full bg-white/10 border border-white/10 rounded px-3 py-2 text-sm text-white focus:outline-none">
-            {['Buyer', 'Seller', 'Listing Agent', 'Buyer Agent', 'Attorney', 'Lender', 'Title Company', 'Other'].map(r => <option key={r} value={r}>{r}</option>)}
+            {['Buyer', 'Seller', 'Listing Agent', 'Buyer Agent', 'Attorney', 'Lender', 'Title Company', 'Inspector', 'Appraiser', 'Other'].map(r => <option key={r} value={r}>{r}</option>)}
           </select>
-          <input placeholder="Name *" value={newParty.name} onChange={e => setNewParty({...newParty, name: e.target.value})}
-            className="w-full bg-white/10 border border-white/10 rounded px-3 py-2 text-sm text-white placeholder-white/30 focus:outline-none focus:border-brand-400" />
-          <input placeholder="Email" value={newParty.email} onChange={e => setNewParty({...newParty, email: e.target.value})}
-            className="w-full bg-white/10 border border-white/10 rounded px-3 py-2 text-sm text-white placeholder-white/30 focus:outline-none focus:border-brand-400" />
-          <input placeholder="Phone" value={newParty.phone} onChange={e => setNewParty({...newParty, phone: e.target.value})}
-            className="w-full bg-white/10 border border-white/10 rounded px-3 py-2 text-sm text-white placeholder-white/30 focus:outline-none focus:border-brand-400" />
+          <input placeholder="Name *" value={newParty.name} onChange={e => setNewParty({...newParty, name: e.target.value})} autoFocus
+            className="w-full bg-white/10 border border-white/10 rounded px-3 py-2 text-sm text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-brand-400" />
+          <input placeholder="Email" type="email" value={newParty.email} onChange={e => setNewParty({...newParty, email: e.target.value})}
+            className="w-full bg-white/10 border border-white/10 rounded px-3 py-2 text-sm text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-brand-400" />
+          <input placeholder="Phone" type="tel" value={newParty.phone} onChange={e => setNewParty({...newParty, phone: e.target.value})}
+            className="w-full bg-white/10 border border-white/10 rounded px-3 py-2 text-sm text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-brand-400" />
           <input placeholder="Firm" value={newParty.firm} onChange={e => setNewParty({...newParty, firm: e.target.value})}
-            className="w-full bg-white/10 border border-white/10 rounded px-3 py-2 text-sm text-white placeholder-white/30 focus:outline-none focus:border-brand-400" />
+            className="w-full bg-white/10 border border-white/10 rounded px-3 py-2 text-sm text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-brand-400" />
           <button onClick={addParty} className="w-full btn-brand">Add Party</button>
         </Modal>
       )}
@@ -726,10 +852,10 @@ export default function TransactionDetail() {
       {addMilestoneModal && (
         <Modal onClose={() => setAddMilestoneModal(false)}>
           <h3 className="font-semibold text-lg">Add Milestone</h3>
-          <input placeholder="Label *" value={newMilestone.label} onChange={e => setNewMilestone({...newMilestone, label: e.target.value})}
-            className="w-full bg-white/10 border border-white/10 rounded px-3 py-2 text-sm text-white placeholder-white/30 focus:outline-none focus:border-brand-400" />
+          <input placeholder="Label *" value={newMilestone.label} onChange={e => setNewMilestone({...newMilestone, label: e.target.value})} autoFocus
+            className="w-full bg-white/10 border border-white/10 rounded px-3 py-2 text-sm text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-brand-400" />
           <input type="date" value={newMilestone.date} onChange={e => setNewMilestone({...newMilestone, date: e.target.value})}
-            className="w-full bg-white/10 border border-white/10 rounded px-3 py-2 text-sm text-white focus:outline-none focus:border-brand-400" />
+            className="w-full bg-white/10 border border-white/10 rounded px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-brand-400" />
           <select value={newMilestone.category} onChange={e => setNewMilestone({...newMilestone, category: e.target.value})}
             className="w-full bg-white/10 border border-white/10 rounded px-3 py-2 text-sm text-white focus:outline-none">
             {['Contract', 'Inspection', 'Financing', 'Closing'].map(c => <option key={c} value={c}>{c}</option>)}
@@ -760,10 +886,10 @@ export default function TransactionDetail() {
 
 function Modal({ onClose, children }: { onClose: () => void; children: React.ReactNode }) {
   return (
-    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" onClick={onClose}>
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={onClose}>
       <div className="glass p-6 w-full max-w-md space-y-4 animate-slide-in" onClick={e => e.stopPropagation()}>
         <div className="flex justify-end">
-          <button onClick={onClose} className="text-white/40 hover:text-white"><X size={20} /></button>
+          <button onClick={onClose} className="text-white/40 hover:text-white transition" aria-label="Close"><X size={20} /></button>
         </div>
         {children}
       </div>

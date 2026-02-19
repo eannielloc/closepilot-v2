@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../lib/api';
+import { usePageTitle } from '../lib/usePageTitle';
 import { formatCurrency, formatDate, daysUntil } from '../lib/utils';
 import { useToast } from '../components/Toast';
 import { TrendingUp, DollarSign, Clock, Hash, Calendar, PieChart, BarChart3 } from 'lucide-react';
@@ -8,6 +9,7 @@ import { TrendingUp, DollarSign, Clock, Hash, Calendar, PieChart, BarChart3 } fr
 const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 export default function Analytics() {
+  usePageTitle('Analytics');
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const { error: showError } = useToast();

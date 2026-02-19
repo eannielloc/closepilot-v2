@@ -1,10 +1,12 @@
 import { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../lib/api';
+import { usePageTitle } from '../lib/usePageTitle';
 import ParsedContractView from '../components/ParsedContractView';
 import { Upload as UploadIcon, FileText, Loader2, CheckCircle } from 'lucide-react';
 
 export default function Upload() {
+  usePageTitle('Upload Contract');
   const [file, setFile] = useState<File | null>(null);
   const [parsing, setParsing] = useState(false);
   const [parsed, setParsed] = useState<any>(null);

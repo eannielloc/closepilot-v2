@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../lib/api';
+import { usePageTitle } from '../lib/usePageTitle';
 import { formatCurrency, daysUntil } from '../lib/utils';
 import { useToast } from '../components/Toast';
 import { GripVertical, Calendar, ArrowRight } from 'lucide-react';
@@ -21,6 +22,7 @@ function getProgress(tx: any) {
 }
 
 export default function Pipeline() {
+  usePageTitle('Pipeline');
   const [transactions, setTransactions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const { success, error: showError } = useToast();

@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../lib/api';
+import { usePageTitle } from '../lib/usePageTitle';
 import { Users, Mail, Phone, ChevronRight, Building } from 'lucide-react';
 
 export default function VendorComms() {
+  usePageTitle('Vendors');
   const [txs, setTxs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<any>(null);

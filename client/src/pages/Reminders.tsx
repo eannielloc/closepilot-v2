@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../lib/api';
+import { usePageTitle } from '../lib/usePageTitle';
 import { formatDate, daysUntil } from '../lib/utils';
 import { Bell, Calendar, AlertTriangle, Clock, ChevronRight } from 'lucide-react';
 
@@ -10,6 +11,7 @@ interface Reminder {
 }
 
 export default function Reminders() {
+  usePageTitle('Reminders');
   const [reminders, setReminders] = useState<Reminder[]>([]);
   const [loading, setLoading] = useState(true);
 

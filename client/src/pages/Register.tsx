@@ -1,9 +1,11 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../lib/auth';
+import { usePageTitle } from '../lib/usePageTitle';
 import { UserPlus } from 'lucide-react';
 
 export default function Register() {
+  usePageTitle('Create Account');
   const [form, setForm] = useState({ name: '', email: '', password: '', firm: '' });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
