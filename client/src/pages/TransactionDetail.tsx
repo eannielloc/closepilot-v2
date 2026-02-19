@@ -8,7 +8,7 @@ import { CHECKLIST_TEMPLATES } from '../lib/templates';
 import {
   ArrowLeft, MapPin, DollarSign, Calendar, Users, FileText, AlertTriangle, Wrench,
   CheckCircle, Circle, Upload, Download, Trash2, Send, X, MessageSquare, Clock,
-  Plus, Edit3, Save, ChevronDown, ChevronRight, ListChecks, FolderOpen, Share2, Copy, Check, FileDown
+  Plus, Edit3, Save, ChevronDown, ChevronRight, ListChecks, FolderOpen, Share2, Copy, Check, FileDown, MousePointerClick
 } from 'lucide-react';
 
 function formatBytes(bytes: number) {
@@ -334,6 +334,12 @@ export default function TransactionDetail() {
               <button onClick={() => handleDownload(d.id)} className="p-1.5 rounded hover:bg-white/10 text-white/50 hover:text-white transition" title="Download">
                 <Download size={14} />
               </button>
+            )}
+            {d.file_path && (
+              <Link to={`/documents/${d.id}/prepare`}
+                className="p-1.5 rounded hover:bg-white/10 text-white/50 hover:text-accent-400 transition" title="Prepare for Signing">
+                <MousePointerClick size={14} />
+              </Link>
             )}
             <button onClick={() => { setSigModal({ docId: d.id, docName: d.name }); setSigners([{ name: '', email: '' }]); }}
               className="p-1.5 rounded hover:bg-white/10 text-white/50 hover:text-brand-400 transition" title="Send for Signature">

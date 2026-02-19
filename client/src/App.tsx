@@ -18,6 +18,7 @@ import Pipeline from './pages/Pipeline';
 import Analytics from './pages/Analytics';
 import Portal from './pages/Portal';
 import Onboarding from './pages/Onboarding';
+import PrepareDocument from './pages/PrepareDocument';
 import CommandPalette from './components/CommandPalette';
 
 function AppContent() {
@@ -42,6 +43,7 @@ function AppContent() {
         <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
         <Route path="/pipeline" element={<ProtectedRoute><Pipeline /></ProtectedRoute>} />
         <Route path="/analytics" element={<ProtectedRoute><Analytics /></ProtectedRoute>} />
+        <Route path="/documents/:id/prepare" element={<ProtectedRoute><PrepareDocument /></ProtectedRoute>} />
         <Route path="/sign/:token" element={<SignDocument />} />
         <Route path="/portal/:token" element={<Portal />} />
       </Routes>
