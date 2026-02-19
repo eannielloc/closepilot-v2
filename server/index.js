@@ -11,6 +11,7 @@ app.use('/api/auth', require('./routes/auth'));
 app.use('/api/transactions', require('./routes/transactions'));
 app.use('/api/parse', require('./routes/parse'));
 app.use('/api/reminders', require('./routes/reminders'));
+app.use('/api', require('./routes/documents'));
 
 // Serve static in production
 const clientDist = path.join(__dirname, '..', 'client', 'dist');

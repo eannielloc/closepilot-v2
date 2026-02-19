@@ -63,11 +63,19 @@ async function initDb() {
     `CREATE TABLE IF NOT EXISTS transactions (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL, property TEXT NOT NULL, address TEXT NOT NULL, city TEXT NOT NULL, state TEXT NOT NULL, county TEXT, price REAL NOT NULL, status TEXT DEFAULT 'Active', contract_date TEXT, closing_date TEXT, contract_type TEXT, raw_parsed_json TEXT, created_at DATETIME DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY (user_id) REFERENCES users(id))`,
     `CREATE TABLE IF NOT EXISTS parties (id INTEGER PRIMARY KEY AUTOINCREMENT, transaction_id INTEGER NOT NULL, role TEXT NOT NULL, name TEXT NOT NULL, email TEXT, phone TEXT, firm TEXT, FOREIGN KEY (transaction_id) REFERENCES transactions(id))`,
     `CREATE TABLE IF NOT EXISTS milestones (id INTEGER PRIMARY KEY AUTOINCREMENT, transaction_id INTEGER NOT NULL, label TEXT NOT NULL, date TEXT NOT NULL, completed INTEGER DEFAULT 0, category TEXT, FOREIGN KEY (transaction_id) REFERENCES transactions(id))`,
-    `CREATE TABLE IF NOT EXISTS documents (id INTEGER PRIMARY KEY AUTOINCREMENT, transaction_id INTEGER NOT NULL, name TEXT NOT NULL, status TEXT DEFAULT 'Pending', FOREIGN KEY (transaction_id) REFERENCES transactions(id))`,
+    `CREATE TABLE IF NOT EXISTS documents (id INTEGER PRIMARY KEY AUTOINCREMENT, transaction_id INTEGER NOT NULL, name TEXT NOT NULL, status TEXT DEFAULT 'Pending', file_path TEXT, file_size INTEGER, mime_type TEXT, uploaded_at TEXT, uploaded_by INTEGER, FOREIGN KEY (transaction_id) REFERENCES transactions(id))`,
     `CREATE TABLE IF NOT EXISTS contingencies (id INTEGER PRIMARY KEY AUTOINCREMENT, transaction_id INTEGER NOT NULL, name TEXT NOT NULL, FOREIGN KEY (transaction_id) REFERENCES transactions(id))`,
-    `CREATE TABLE IF NOT EXISTS vendors (id INTEGER PRIMARY KEY AUTOINCREMENT, transaction_id INTEGER NOT NULL, type TEXT NOT NULL, name TEXT NOT NULL, email TEXT, phone TEXT, extra_json TEXT, FOREIGN KEY (transaction_id) REFERENCES transactions(id))`
+    `CREATE TABLE IF NOT EXISTS vendors (id INTEGER PRIMARY KEY AUTOINCREMENT, transaction_id INTEGER NOT NULL, type TEXT NOT NULL, name TEXT NOT NULL, email TEXT, phone TEXT, extra_json TEXT, FOREIGN KEY (transaction_id) REFERENCES transactions(id))`,
+    `CREATE TABLE IF NOT EXISTS document_signatures (id INTEGER PRIMARY KEY AUTOINCREMENT, document_id INTEGER NOT NULL, signer_name TEXT NOT NULL, signer_email TEXT NOT NULL, status TEXT DEFAULT 'pending', signed_at TEXT, ip_address TEXT, token TEXT UNIQUE NOT NULL, FOREIGN KEY (document_id) REFERENCES documents(id))`
   ];
   tables.forEach(t => db.run(t));
+
+  // Migration: add columns to documents if missing
+  try { db.run('ALTER TABLE documents ADD COLUMN file_path TEXT'); } catch(e) {}
+  try { db.run('ALTER TABLE documents ADD COLUMN file_size INTEGER'); } catch(e) {}
+  try { db.run('ALTER TABLE documents ADD COLUMN mime_type TEXT'); } catch(e) {}
+  try { db.run('ALTER TABLE documents ADD COLUMN uploaded_at TEXT'); } catch(e) {}
+  try { db.run('ALTER TABLE documents ADD COLUMN uploaded_by INTEGER'); } catch(e) {}
 
   const count = db.exec('SELECT COUNT(*) FROM users');
   const userCount = count[0]?.values[0]?.[0] || 0;
