@@ -36,4 +36,29 @@ router.post('/login', (req, res) => {
   }
 });
 
+// Update profile (onboarding step 1)
+router.put('/profile', (req, res) => {
+  try {
+    const header = req.headers.authorization;
+    if (!header) return res.status(401).json({ error: 'No token' });
+    const jwt = require('jsonwebtoken');
+    const decoded = jwt.verify(header.split(' ')[1], SECRET);
+    const { name, firm, phone, license_number } = req.body;
+    prepare('UPDATE users SET name=?, firm=?, phone=?, license_number=? WHERE id=?').run(name || '', firm || null, phone || null, license_number || null, decoded.id);
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// Complete onboarding
+router.post('/onboarding-complete', (req, res) => {
+  try {
+    const header = req.headers.authorization;
+    if (!header) return res.status(401).json({ error: 'No token' });
+    const jwt = require('jsonwebtoken');
+    const decoded = jwt.verify(header.split(' ')[1], SECRET);
+    prepare('UPDATE users SET onboarding_completed=1 WHERE id=?').run(decoded.id);
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 module.exports = router;

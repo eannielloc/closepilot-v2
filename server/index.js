@@ -17,6 +17,7 @@ app.use('/api', require('./routes/activity'));
 app.use('/api', require('./routes/notes'));
 app.use('/api/analytics', require('./routes/analytics'));
 app.use('/api', require('./routes/portal'));
+app.use('/api', require('./routes/search'));
 app.use('/api/transactions', require('./routes/export'));
 
 // Serve static in production

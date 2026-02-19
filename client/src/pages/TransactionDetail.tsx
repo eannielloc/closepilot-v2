@@ -8,7 +8,7 @@ import { CHECKLIST_TEMPLATES } from '../lib/templates';
 import {
   ArrowLeft, MapPin, DollarSign, Calendar, Users, FileText, AlertTriangle, Wrench,
   CheckCircle, Circle, Upload, Download, Trash2, Send, X, MessageSquare, Clock,
-  Plus, Edit3, Save, ChevronDown, ChevronRight, ListChecks, FolderOpen, Share2, Copy, Check
+  Plus, Edit3, Save, ChevronDown, ChevronRight, ListChecks, FolderOpen, Share2, Copy, Check, FileDown
 } from 'lucide-react';
 
 function formatBytes(bytes: number) {

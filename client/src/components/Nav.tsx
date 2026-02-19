@@ -2,12 +2,14 @@ import { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../lib/auth';
 import { Home, LayoutDashboard, Upload, Bell, Users, LogIn, LogOut, Menu, X, Settings, Kanban, BarChart3 } from 'lucide-react';
+import { ThemeToggle, useTheme } from './ThemeToggle';
 
 export default function Nav() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [open, setOpen] = useState(false);
+  const { theme, toggle: toggleTheme } = useTheme();
 
   const links = user ? [
     { to: '/dashboard', icon: <LayoutDashboard size={18} />, label: 'Dashboard' },
@@ -35,6 +37,7 @@ export default function Nav() {
               {l.icon} {l.label}
             </Link>
           ))}
+          <ThemeToggle theme={theme} toggle={toggleTheme} />
           {user ? (
             <>
               <span className="text-white/60 text-sm ml-3 mr-2">{user.name}</span>
