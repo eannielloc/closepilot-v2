@@ -8,7 +8,7 @@ import { CHECKLIST_TEMPLATES } from '../lib/templates';
 import {
   ArrowLeft, MapPin, DollarSign, Calendar, Users, FileText, AlertTriangle, Wrench,
   CheckCircle, Circle, Upload, Download, Trash2, Send, X, MessageSquare, Clock,
-  Plus, Edit3, Save, ChevronDown, ChevronRight, ListChecks, FolderOpen
+  Plus, Edit3, Save, ChevronDown, ChevronRight, ListChecks, FolderOpen, Share2, Copy, Check
 } from 'lucide-react';
 
 function formatBytes(bytes: number) {
@@ -68,6 +68,10 @@ export default function TransactionDetail() {
 
   // Document category grouping
   const [groupByCategory, setGroupByCategory] = useState(false);
+
+  // Share portal
+  const [shareLoading, setShareLoading] = useState(false);
+  const [shareCopied, setShareCopied] = useState(false);
 
   const reload = useCallback(async () => {
     const data = await api.get(`/transactions/${id}`);
@@ -190,6 +194,22 @@ export default function TransactionDetail() {
       setNewNote('');
       api.get(`/transactions/${id}/activity`).then(setActivity).catch(() => {});
     } catch (e: any) { showError(e.message); }
+  };
+
+  const shareWithClient = async () => {
+    setShareLoading(true);
+    try {
+      const res = await api.post(`/transactions/${id}/share`, { label: 'Client Portal' });
+      const url = `${window.location.origin}${res.url}`;
+      await navigator.clipboard?.writeText(url);
+      setShareCopied(true);
+      success('Portal link copied to clipboard!');
+      setTimeout(() => setShareCopied(false), 3000);
+    } catch (e: any) {
+      showError(e.message);
+    } finally {
+      setShareLoading(false);
+    }
   };
 
   const deleteNote = async (noteId: number) => {
@@ -375,6 +395,11 @@ export default function TransactionDetail() {
                   <h1 className="text-2xl md:text-3xl font-bold">{tx.property}</h1>
                   <button onClick={startEditing} className="p-1.5 rounded hover:bg-white/10 text-white/40 hover:text-white transition" title="Edit">
                     <Edit3 size={16} />
+                  </button>
+                  <button onClick={shareWithClient} disabled={shareLoading}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-accent-500/20 text-accent-400 hover:bg-accent-500/30 transition text-xs font-medium" title="Share with client">
+                    {shareCopied ? <Check size={14} /> : <Share2 size={14} />}
+                    {shareCopied ? 'Copied!' : 'Share with Client'}
                   </button>
                 </div>
                 <div className="flex items-center gap-2 text-white/60 mt-1"><MapPin size={16} /> {tx.address}, {tx.city}, {tx.state}</div>

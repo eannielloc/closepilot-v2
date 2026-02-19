@@ -173,4 +173,35 @@ router.put('/settings', (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// Update transaction stage (pipeline)
+router.post('/:id/stage', (req, res) => {
+  try {
+    const tx = prepare('SELECT id FROM transactions WHERE id = ? AND user_id = ?').get(+req.params.id, req.user.id);
+    if (!tx) return res.status(404).json({ error: 'Not found' });
+    const { stage } = req.body;
+    const validStages = ['new', 'under_contract', 'inspection', 'financing', 'closing', 'closed'];
+    if (!validStages.includes(stage)) return res.status(400).json({ error: 'Invalid stage' });
+    prepare('UPDATE transactions SET stage = ? WHERE id = ?').run(stage, +req.params.id);
+    // If stage is closed, also update status
+    if (stage === 'closed') {
+      prepare('UPDATE transactions SET status = ? WHERE id = ?').run('Closed', +req.params.id);
+    }
+    try { prepare('INSERT INTO activity_log (transaction_id, user_id, action, detail) VALUES (?,?,?,?)').run(+req.params.id, req.user.id, 'stage_changed', `Stage changed to ${stage}`); } catch(e) {}
+    res.json({ ok: true, stage });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// Update commission fields
+router.patch('/:id/commission', (req, res) => {
+  try {
+    const tx = prepare('SELECT id, price FROM transactions WHERE id = ? AND user_id = ?').get(+req.params.id, req.user.id);
+    if (!tx) return res.status(404).json({ error: 'Not found' });
+    const { commission_rate, commission_split } = req.body;
+    const rate = commission_rate != null ? parseFloat(commission_rate) : null;
+    const amount = rate != null && tx.price ? (tx.price * rate / 100) : null;
+    prepare('UPDATE transactions SET commission_rate = ?, commission_amount = ?, commission_split = ? WHERE id = ?').run(rate, amount, commission_split || null, +req.params.id);
+    res.json({ commission_rate: rate, commission_amount: amount, commission_split });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 module.exports = router;

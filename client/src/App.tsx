@@ -12,6 +12,9 @@ import Reminders from './pages/Reminders';
 import VendorComms from './pages/VendorComms';
 import SignDocument from './pages/SignDocument';
 import Settings from './pages/Settings';
+import Pipeline from './pages/Pipeline';
+import Analytics from './pages/Analytics';
+import Portal from './pages/Portal';
 
 export default function App() {
   return (
@@ -28,7 +31,10 @@ export default function App() {
           <Route path="/reminders" element={<ProtectedRoute><Reminders /></ProtectedRoute>} />
           <Route path="/vendors" element={<ProtectedRoute><VendorComms /></ProtectedRoute>} />
           <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+          <Route path="/pipeline" element={<ProtectedRoute><Pipeline /></ProtectedRoute>} />
+          <Route path="/analytics" element={<ProtectedRoute><Analytics /></ProtectedRoute>} />
           <Route path="/sign/:token" element={<SignDocument />} />
+          <Route path="/portal/:token" element={<Portal />} />
         </Routes>
       </div>
     </ToastProvider>

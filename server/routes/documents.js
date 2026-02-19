@@ -6,6 +6,7 @@ const fs = require('fs');
 const crypto = require('crypto');
 const { prepare } = require('../db');
 const { authMiddleware } = require('../auth');
+const { sendSignatureRequestEmail } = require('./email');
 
 const uploadsBase = path.join(__dirname, '..', 'data', 'uploads');
 
@@ -70,7 +71,7 @@ router.delete('/documents/:id', authMiddleware, (req, res) => {
 });
 
 // Send document for signature
-router.post('/documents/:id/send-for-signature', authMiddleware, (req, res) => {
+router.post('/documents/:id/send-for-signature', authMiddleware, async (req, res) => {
   const doc = prepare('SELECT d.*, t.user_id FROM documents d JOIN transactions t ON d.transaction_id = t.id WHERE d.id = ?').get(Number(req.params.id));
   if (!doc || doc.user_id !== req.user.id) return res.status(404).json({ error: 'Not found' });
 
@@ -84,6 +85,30 @@ router.post('/documents/:id/send-for-signature', authMiddleware, (req, res) => {
     ).run(doc.id, s.name, s.email, 'pending', token);
     return { id: r.lastInsertRowid, signer_name: s.name, signer_email: s.email, status: 'pending', token };
   });
+
+  // Send emails to signers
+  const user = prepare('SELECT name, firm FROM users WHERE id = ?').get(req.user.id);
+  const tx = prepare('SELECT address, city, state FROM transactions WHERE id = ?').get(doc.transaction_id);
+  const propertyAddress = tx ? `${tx.address}, ${tx.city}, ${tx.state}` : 'N/A';
+
+  for (const sig of results) {
+    try {
+      await sendSignatureRequestEmail({
+        signerName: sig.signer_name,
+        signerEmail: sig.signer_email,
+        documentName: doc.name,
+        agentName: user?.name || 'An agent',
+        agentFirm: user?.firm || '',
+        propertyAddress,
+        signToken: sig.token,
+      });
+    } catch (emailErr) {
+      console.error('Email send failed:', emailErr.message);
+    }
+  }
+
+  // Log activity
+  try { prepare('INSERT INTO activity_log (transaction_id, user_id, action, detail) VALUES (?,?,?,?)').run(doc.transaction_id, req.user.id, 'signature_sent', `Sent for signature: ${doc.name}`); } catch(e) {}
 
   res.json({ signatures: results });
 });

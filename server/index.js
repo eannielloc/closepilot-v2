@@ -15,6 +15,8 @@ app.use('/api/reminders', require('./routes/reminders'));
 app.use('/api', require('./routes/documents'));
 app.use('/api', require('./routes/activity'));
 app.use('/api', require('./routes/notes'));
+app.use('/api/analytics', require('./routes/analytics'));
+app.use('/api', require('./routes/portal'));
 
 // Serve static in production
 const clientDist = path.join(__dirname, '..', 'client', 'dist');

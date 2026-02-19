@@ -29,3 +29,15 @@ body {
 .animate-slide-in {
   animation: slide-in 0.2s ease-out;
 }
+
+.hero-gradient {
+  background: radial-gradient(ellipse 80% 60% at 50% 0%, rgba(99,102,241,0.12) 0%, transparent 60%),
+              radial-gradient(ellipse 60% 50% at 80% 80%, rgba(52,211,153,0.06) 0%, transparent 50%);
+}
+
+@keyframes pulse-slow {
+  0%, 100% { opacity: 0.4; transform: scale(1); }
+  50% { opacity: 0.7; transform: scale(1.05); }
+}
+.animate-pulse-slow { animation: pulse-slow 8s ease-in-out infinite; }
+.delay-2 { animation-delay: 3s; }

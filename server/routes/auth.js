@@ -3,15 +3,18 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { prepare } = require('../db');
 const { SECRET } = require('../auth');
+const { sendWelcomeEmail } = require('./email');
 const router = express.Router();
 
-router.post('/register', (req, res) => {
+router.post('/register', async (req, res) => {
   try {
     const { email, password, name, firm } = req.body;
     if (!email || !password || !name) return res.status(400).json({ error: 'Missing required fields' });
     const hash = bcrypt.hashSync(password, 10);
     const result = prepare('INSERT INTO users (email, password_hash, name, firm) VALUES (?,?,?,?)').run(email, hash, name, firm || null);
     const token = jwt.sign({ id: result.lastInsertRowid, email, name }, SECRET, { expiresIn: '7d' });
+    // Send welcome email (non-blocking)
+    sendWelcomeEmail({ name, email }).catch(err => console.error('Welcome email failed:', err.message));
     res.json({ token, user: { id: result.lastInsertRowid, email, name, firm } });
   } catch (e) {
     if (e.message && e.message.includes('UNIQUE')) return res.status(409).json({ error: 'Email already exists' });
