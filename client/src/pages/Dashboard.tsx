@@ -286,13 +286,6 @@ export default function Dashboard() {
                     className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-brand-400 transition" />
                 </div>
                 <div>
-                  <label className="block text-sm text-white/60 mb-1">Price</label>
-                  <input type="number" value={form.price} onChange={e => setForm(f => ({ ...f, price: e.target.value }))} placeholder="0" min="0"
-                    className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-brand-400 transition" />
-                </div>
-              </div>
-              <div className="grid grid-cols-3 gap-3">
-                <div>
                   <label className="block text-sm text-white/60 mb-1">Type</label>
                   <select value={form.contract_type} onChange={e => setForm(f => ({ ...f, contract_type: e.target.value }))} className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-brand-400 transition">
                     <option value="Purchase">Purchase</option>
@@ -300,14 +293,6 @@ export default function Dashboard() {
                     <option value="Lease">Lease</option>
                     <option value="Rental">Rental</option>
                   </select>
-                </div>
-                <div>
-                  <label className="block text-sm text-white/60 mb-1">Contract Date</label>
-                  <input type="date" value={form.contract_date} onChange={e => setForm(f => ({ ...f, contract_date: e.target.value }))} className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-brand-400 transition" />
-                </div>
-                <div>
-                  <label className="block text-sm text-white/60 mb-1">Closing Date</label>
-                  <input type="date" value={form.closing_date} onChange={e => setForm(f => ({ ...f, closing_date: e.target.value }))} className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-brand-400 transition" />
                 </div>
               </div>
               <button type="submit" disabled={creating} className="w-full btn-brand py-2.5 text-sm font-medium disabled:opacity-50">
