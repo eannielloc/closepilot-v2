@@ -18,13 +18,14 @@ router.post('/', (req, res) => {
       county || null, price || 0, 'Active', contract_date || null,
       closing_date || null, contract_type || null, null
     );
-    const txId = result.lastInsertRowid;
+    const txId = Number(result.lastInsertRowid);
 
     try {
       prepare('INSERT INTO activity_log (transaction_id, user_id, action, detail) VALUES (?,?,?,?)').run(txId, req.user.id, 'transaction_created', 'Transaction created manually');
     } catch(e) {}
 
     const tx = getFullTransaction(txId, req.user.id);
+    if (!tx) return res.status(500).json({ error: 'Transaction created but could not be retrieved' });
     res.json(tx);
   } catch (e) { res.status(500).json({ error: e.message }); }
 });

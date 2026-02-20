@@ -42,7 +42,12 @@ export default function Dashboard() {
     setCreateError('');
     try {
       const tx = await api.post('/transactions', { ...form, price: form.price ? Number(form.price) : 0 });
-      navigate(`/transactions/${tx.id}`);
+      if (tx && tx.id) {
+        navigate(`/transactions/${tx.id}`);
+      } else {
+        setCreateError('Transaction created but failed to load. Check dashboard.');
+        setShowCreate(false);
+      }
     } catch (err: any) {
       setCreateError(err.message || 'Failed to create transaction');
     } finally {
