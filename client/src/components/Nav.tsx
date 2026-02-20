@@ -22,7 +22,7 @@ export default function Nav() {
   ] : [];
 
   return (
-    <nav className="glass border-t-0 border-x-0 rounded-none px-4 md:px-6 py-3 sticky top-0 z-50">
+    <nav className="bg-[#09090f]/80 backdrop-blur-xl border-b border-white/[0.04] px-4 md:px-6 py-3 sticky top-0 z-50">
       <div className="flex items-center justify-between">
         <Link to="/" className="flex items-center gap-2 text-xl font-bold" onClick={() => setOpen(false)}>
           <div className="w-8 h-8 bg-brand-500 rounded-lg flex items-center justify-center text-sm">CP</div>
