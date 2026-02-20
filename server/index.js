@@ -3,9 +3,20 @@ const cors = require('cors');
 const path = require('path');
 const { initDb } = require('./db');
 
+// Prevent crashes from unhandled errors
+process.on('uncaughtException', (err) => {
+  console.error('Uncaught exception:', err);
+});
+process.on('unhandledRejection', (err) => {
+  console.error('Unhandled rejection:', err);
+});
+
 const app = express();
 app.use(cors());
 app.use(express.json());
+
+// Health check
+app.get('/health', (req, res) => res.json({ status: 'ok' }));
 
 // Routes
 app.use('/api/auth', require('./routes/auth'));
