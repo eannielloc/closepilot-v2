@@ -95,7 +95,7 @@ async function initDb() {
 
   if (userCount === 0) {
     const hash = bcrypt.hashSync('demo123', 10);
-    prepare('INSERT INTO users (email, password_hash, name, firm) VALUES (?,?,?,?)').run('demo@closepilot.ai', hash, 'Chris Eanniello', 'ClosePilot Realty');
+    prepare('INSERT INTO users (email, password_hash, name, firm) VALUES (?,?,?,?)').run('demo@closepilot.ai', hash, 'Demo Agent', 'ClosePilot Realty');
 
     const ins = (q, ...args) => prepare(q).run(...args);
 
