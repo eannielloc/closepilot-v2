@@ -519,8 +519,8 @@ export default function TransactionDetail() {
             </div>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4 text-sm">
               <div><span className="text-white/40">Type</span><br />{tx.contract_type || '—'}</div>
-              <div><span className="text-white/40">Contract Date</span><br />{formatDate(tx.contract_date)}</div>
-              <div><span className="text-white/40">Closing Date</span><br />{formatDate(tx.closing_date)}</div>
+              {tx.contract_date && <div><span className="text-white/40">Contract Date</span><br />{formatDate(tx.contract_date)}</div>}
+              {tx.closing_date && <div><span className="text-white/40">Closing Date</span><br />{formatDate(tx.closing_date)}</div>}
               <div><span className="text-white/40">Progress</span><br />{progress}% ({completedMs}/{totalMs})</div>
             </div>
             <div className="mt-3 h-2 bg-white/10 rounded-full overflow-hidden">

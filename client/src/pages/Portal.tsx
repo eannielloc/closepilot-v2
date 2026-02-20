@@ -104,8 +104,8 @@ export default function Portal() {
                 {tx.status}
               </span>
             </div>
-            <div><span className="text-white/40">Contract Date</span><br />{formatDate(tx.contract_date)}</div>
-            <div><span className="text-white/40">Closing Date</span><br />{formatDate(tx.closing_date)}</div>
+            {tx.contract_date && <div><span className="text-white/40">Contract Date</span><br />{formatDate(tx.contract_date)}</div>}
+            {tx.closing_date && <div><span className="text-white/40">Closing Date</span><br />{formatDate(tx.closing_date)}</div>}
           </div>
 
           {/* Progress bar */}

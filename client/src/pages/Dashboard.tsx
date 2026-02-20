@@ -237,7 +237,7 @@ export default function Dashboard() {
                 <div className="text-sm text-white/50 truncate">{tx.address}{tx.city ? `, ${tx.city}` : ''}{tx.state ? `, ${tx.state}` : ''}</div>
                 <div className="flex items-center gap-3 md:gap-4 mt-2 text-xs md:text-sm text-white/40 flex-wrap">
                   <span>{formatCurrency(tx.price)}</span>
-                  <span>Closing: {formatDate(tx.closing_date)}</span>
+                  {tx.closing_date && <span>Closing: {formatDate(tx.closing_date)}</span>}
                   <span>{completedMs}/{totalMs} milestones</span>
                 </div>
                 {totalMs > 0 && (
