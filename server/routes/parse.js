@@ -44,7 +44,7 @@ async function parseWithAnthropicAPI(text) {
 
 async function parseWithClaudeCLI(text) {
   return new Promise((resolve, reject) => {
-    const cliPath = process.env.CLAUDE_CLI_PATH || '/Users/chriseanniello/.local/bin/claude';
+    const cliPath = process.env.CLAUDE_CLI_PATH || 'claude';
     const proc = spawn(cliPath, [
       '--print', '--output-format', 'text', '--model', 'sonnet', '--max-turns', '1'
     ], { timeout: 180000 });
