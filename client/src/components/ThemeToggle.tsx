@@ -23,7 +23,8 @@ export function ThemeToggle({ theme, toggle }: { theme: string; toggle: () => vo
   return (
     <button
       onClick={toggle}
-      className="p-2 rounded-lg text-white/60 hover:text-white hover:bg-white/10 transition"
+      className="p-2 rounded-lg transition"
+      style={{ color: 'var(--text-secondary)' }}
       title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
     >
       {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
