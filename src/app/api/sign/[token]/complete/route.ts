@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic"
 import { NextRequest, NextResponse } from "next/server"
 import { getDb, populateTransactionFromParse } from "@/lib/db"
 import { mockParseSignedDocument } from "@/lib/mock-parser"
