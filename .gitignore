@@ -7,3 +7,4 @@ closepilot.db-shm
 closepilot.db-wal
 uploads/*
 !uploads/.gitkeep
+tsconfig.tsbuildinfo
