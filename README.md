@@ -1,73 +1,90 @@
-# ClosePilot v2
+# ClosePilot — AI Transaction Coordinator
 
-AI-powered Transaction Coordinator for Real Estate Agents. Upload a contract PDF, and AI extracts every detail — parties, milestones, documents, contingencies, vendors — into a clean dashboard you can manage through closing.
+Your AI-powered real estate transaction coordinator. **$99 vs $400** for a human TC.
 
-## Features
-
-- **AI Contract Parsing** — Upload a PDF, get a fully structured transaction in seconds
-- **Transaction Dashboard** — Track all deals with progress bars, status filters, and closing countdowns
-- **Milestone Tracking** — Click to complete milestones, organized by category (Contract, Inspection, Financing, Closing)
-- **Document Management** — Track document status (Pending/Received/Missing) per transaction
-- **Vendor Directory** — All inspectors, lenders, title companies across your deals
-- **Deadline Reminders** — See overdue, this-week, and upcoming milestones at a glance
-- **Party Management** — Buyers, sellers, agents, attorneys with contact info
-
-## Tech Stack
-
-- **Frontend:** React + TypeScript + Vite + TailwindCSS
-- **Backend:** Node.js + Express
-- **Database:** SQLite (via sql.js)
-- **Auth:** JWT
-- **AI:** Claude for contract parsing
+Upload a purchase agreement PDF → get a complete timeline with automated reminders, deadline tracking, and party coordination in 60 seconds.
 
 ## Quick Start
 
 ```bash
-# Install dependencies
 npm install
-cd client && npm install && cd ..
-
-# Start server (port 3004)
-node server/index.js
-
-# Start client (port 3005)
-cd client && npm run dev
-
-# Demo login
-# Email: demo@closepilot.ai
-# Password: demo123
+npm run dev
 ```
+
+Open [http://localhost:3000](http://localhost:3000).
+
+> **Note:** The app runs with mock data by default — no database required for development. All contract parsing, email sending, and auth are mocked.
+
+## With Database (Optional)
+
+To use the full Prisma + PostgreSQL setup:
+
+```bash
+cp .env.example .env
+# Edit .env with your DATABASE_URL
+npm run db:push
+npm run db:seed
+```
+
+## Pages
+
+| Route | Description |
+|-------|-------------|
+| `/` | Landing page — hero, how it works, testimonials |
+| `/dashboard` | All active transactions with stats & deadlines |
+| `/transactions/new` | Upload contract PDF, review AI-parsed data |
+| `/transactions/[id]` | Transaction detail with timeline, parties, docs |
+| `/transactions/[id]/timeline` | Full visual timeline with progress bar |
+| `/settings` | Agent profile & notification preferences |
+
+## API Routes
+
+| Method | Route | Description |
+|--------|-------|-------------|
+| `GET` | `/api/transactions` | List all transactions |
+| `POST` | `/api/transactions` | Create new transaction |
+| `GET` | `/api/transactions/[id]` | Get transaction detail |
+| `POST` | `/api/transactions/[id]/parse` | Parse uploaded contract (mock) |
+| `PATCH` | `/api/milestones/[id]` | Update milestone status |
+| `POST` | `/api/reminders/send` | Trigger reminder email (mock) |
+
+## Tech Stack
+
+- **Framework:** Next.js 14 (App Router)
+- **Language:** TypeScript
+- **Styling:** Tailwind CSS + shadcn/ui
+- **Database:** Prisma + PostgreSQL (optional for dev)
+- **Icons:** Lucide React
+
+## What's Mocked
+
+- **Contract parsing** — Returns realistic CT SmartMLS Standard Form data instead of calling Claude API
+- **Email sending** — Logs to console instead of sending via Resend/SendGrid
+- **Authentication** — Uses a hardcoded mock user
+- **File storage** — No actual file upload/storage
 
 ## Project Structure
 
 ```
-closepilot-v2/
-├── server/
-│   ├── index.js          # Express app entry
-│   ├── db.js             # SQLite schema + seed data
-│   ├── auth.js           # JWT middleware
-│   └── routes/
-│       ├── auth.js       # Login/Register
-│       ├── transactions.js  # CRUD + milestones + docs
-│       ├── parse.js      # PDF upload + AI parsing
-│       └── reminders.js  # Deadline aggregation
-├── client/
-│   ├── src/
-│   │   ├── pages/        # All route pages
-│   │   ├── components/   # Shared components
-│   │   └── lib/          # API client, auth context, utils
-│   └── ...config files
-└── package.json
+src/
+├── app/
+│   ├── (app)/           # Authenticated app pages
+│   │   ├── dashboard/
+│   │   ├── transactions/
+│   │   └── settings/
+│   ├── api/             # API routes
+│   └── page.tsx         # Landing page
+├── components/
+│   ├── ui/              # shadcn/ui primitives
+│   ├── timeline-view.tsx
+│   ├── transaction-card.tsx
+│   ├── party-list.tsx
+│   ├── upload-zone.tsx
+│   ├── deadline-alert.tsx
+│   └── dashboard-stats.tsx
+└── lib/
+    ├── db.ts            # Prisma client
+    ├── mock-data.ts     # Sample transactions
+    ├── mock-parser.ts   # Contract parsing mock
+    └── utils.ts         # Helpers
 ```
-
-## Roadmap
-
-- [ ] Facebook Ads integration (auto-create listing ads)
-- [ ] Email notifications for approaching deadlines
-- [ ] Multi-agent support (team dashboard)
-- [ ] Mobile app (React Native)
-- [ ] Stripe billing ($99/mo subscription)
-
----
-
-Built by [ClosePilot](https://closepilot.ai)

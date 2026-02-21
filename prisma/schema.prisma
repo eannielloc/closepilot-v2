@@ -1,0 +1,82 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String        @id @default(cuid())
+  email         String        @unique
+  name          String
+  phone         String?
+  licenseNumber String?
+  brokerage     String?
+  createdAt     DateTime      @default(now())
+  transactions  Transaction[]
+}
+
+model Transaction {
+  id              String      @id @default(cuid())
+  propertyAddress String
+  status          String      @default("new") // new, active, pending_closing, closed, cancelled
+  buyerName       String
+  sellerName      String
+  purchasePrice   Float
+  effectiveDate   DateTime
+  closingDate     DateTime
+  contractType    String      @default("CT SmartMLS Standard Form")
+  agentId         String
+  agent           User        @relation(fields: [agentId], references: [id])
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  milestones      Milestone[]
+  parties         Party[]
+  documents       Document[]
+}
+
+model Milestone {
+  id             String     @id @default(cuid())
+  transactionId  String
+  transaction    Transaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+  name           String
+  type           String     // deposit, inspection, appraisal, loan_approval, title, closing, other
+  dueDate        DateTime
+  status         String     @default("pending") // pending, completed, overdue, waived
+  remindersSent  Int        @default(0)
+  notes          String?
+  reminders      Reminder[]
+}
+
+model Party {
+  id            String      @id @default(cuid())
+  transactionId String
+  transaction   Transaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+  role          String      // buyer, seller, listing_agent, buyers_agent, lender, attorney, inspector
+  name          String
+  email         String?
+  phone         String?
+  company       String?
+}
+
+model Reminder {
+  id             String    @id @default(cuid())
+  milestoneId    String
+  milestone      Milestone @relation(fields: [milestoneId], references: [id], onDelete: Cascade)
+  scheduledAt    DateTime
+  sentAt         DateTime?
+  type           String    // email, sms
+  recipientEmail String
+}
+
+model Document {
+  id            String      @id @default(cuid())
+  transactionId String
+  transaction   Transaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+  name          String
+  fileUrl       String?
+  parsedData    Json?
+  uploadedAt    DateTime    @default(now())
+}

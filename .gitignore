@@ -1,7 +1,9 @@
-node_modules/
-dist/
-server/data/*.db
+node_modules
+.next
 .env
-.DS_Store
-*.log
-BRIEFING.md
+.env.local
+closepilot.db
+closepilot.db-shm
+closepilot.db-wal
+uploads/*
+!uploads/.gitkeep
