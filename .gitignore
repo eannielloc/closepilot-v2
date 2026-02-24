@@ -8,3 +8,4 @@ closepilot.db-wal
 uploads/*
 !uploads/.gitkeep
 tsconfig.tsbuildinfo
+.vercel
