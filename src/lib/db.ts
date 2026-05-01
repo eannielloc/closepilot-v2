@@ -1,20 +1,65 @@
 import Database from "better-sqlite3"
-import path from "path"
 import { v4 as uuid } from "uuid"
 import bcrypt from "bcryptjs"
-
-const DB_PATH = process.env.DATABASE_PATH || path.join(process.cwd(), "closepilot.db")
+import { getDbPath, scheduleUpload, ensureDownloaded, isVercel } from "./db-blob"
 
 let _db: Database.Database | null = null
+let _downloadPrimed = false
+
+// On Vercel, kick off the Blob download before anyone calls getDb().
+// API routes should `await primeDb()` before using getDb to be safe.
+export async function primeDb(): Promise<void> {
+  if (!isVercel()) return
+  if (_downloadPrimed) return
+  await ensureDownloaded()
+  _downloadPrimed = true
+}
+
+// Auto-flag DB as dirty after any write statement, so the Blob sync
+// debounce kicks in without each call site having to remember.
+const WRITE_RE = /^\s*(INSERT|UPDATE|DELETE|REPLACE|CREATE|ALTER|DROP)/i
+
+function instrumentDb(db: Database.Database): Database.Database {
+  if (!isVercel()) return db
+  const origExec = db.exec.bind(db)
+  db.exec = ((sql: string) => {
+    const r = origExec(sql)
+    if (WRITE_RE.test(sql)) scheduleUpload()
+    return r
+  }) as typeof db.exec
+
+  const origPrepare = db.prepare.bind(db)
+  db.prepare = ((sql: string) => {
+    const stmt = origPrepare(sql)
+    if (WRITE_RE.test(sql)) {
+      const origRun = stmt.run.bind(stmt)
+      stmt.run = ((...args: unknown[]) => {
+        const r = origRun(...(args as Parameters<typeof origRun>))
+        scheduleUpload()
+        return r
+      }) as typeof stmt.run
+    }
+    return stmt
+  }) as typeof db.prepare
+  return db
+}
 
 export function getDb(): Database.Database {
   if (!_db) {
-    _db = new Database(DB_PATH)
-    _db.pragma("journal_mode = WAL")
+    const dbPath = getDbPath()
+    _db = new Database(dbPath)
+    // /tmp on Vercel does not support WAL across instances; safer to use DELETE journal.
+    _db.pragma(isVercel() ? "journal_mode = DELETE" : "journal_mode = WAL")
     _db.pragma("foreign_keys = ON")
     initSchema(_db)
+    _db = instrumentDb(_db)
   }
   return _db
+}
+
+// Marks the DB as dirty and schedules an async Blob upload (no-op locally).
+export function markDirty(): void {
+  scheduleUpload()
 }
 
 function initSchema(db: Database.Database) {

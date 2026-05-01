@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { mockParseContract, type ParsedContract } from "@/lib/mock-parser"
+import { type ParsedContract } from "@/lib/mock-parser"
 import { formatCurrency, formatDate } from "@/lib/utils"
 import { ArrowRight, CheckCircle, FileText, FolderOpen, Loader2 as Spinner, MapPin } from "lucide-react"
 
@@ -24,10 +24,22 @@ export default function NewTransactionPage() {
 
   const handleUpload = async (file: File) => {
     setIsLoading(true)
-    await new Promise((r) => setTimeout(r, 2000))
-    const data = mockParseContract(file.name)
-    setParsed(data)
-    setIsLoading(false)
+    try {
+      const fd = new FormData()
+      fd.append("file", file)
+      const res = await fetch("/api/transactions/parse-upload", { method: "POST", body: fd })
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        throw new Error(err.error || "Parse failed")
+      }
+      const data = (await res.json()) as ParsedContract
+      setParsed(data)
+    } catch (err) {
+      console.error("[upload] parse failed:", err)
+      alert("Could not parse the contract. Please try again or enter details manually.")
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   const handleCreateFromUpload = async () => {
