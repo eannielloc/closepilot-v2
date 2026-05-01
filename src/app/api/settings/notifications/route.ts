@@ -1,9 +1,10 @@
 export const dynamic = "force-dynamic"
 import { NextRequest, NextResponse } from "next/server"
 import { getSession } from "@/lib/auth"
-import { getDb } from "@/lib/db"
+import { getDb, primeDb } from "@/lib/db"
 
 export async function GET() {
+  await primeDb()
   const session = await getSession()
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
@@ -23,6 +24,7 @@ export async function GET() {
 }
 
 export async function PUT(req: NextRequest) {
+  await primeDb()
   const session = await getSession()
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 

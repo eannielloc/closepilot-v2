@@ -1,16 +1,18 @@
 export const dynamic = "force-dynamic"
 import { NextRequest, NextResponse } from "next/server"
 import { getSession } from "@/lib/auth"
-import { getDb } from "@/lib/db"
+import { getDb, primeDb } from "@/lib/db"
 import { v4 as uuid } from "uuid"
 
 export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
+  await primeDb()
   const db = getDb()
   const fields = db.prepare("SELECT * FROM document_fields WHERE document_id = ? ORDER BY page_number, created_at").all(params.id)
   return NextResponse.json({ fields })
 }
 
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
+  await primeDb()
   const session = await getSession()
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 

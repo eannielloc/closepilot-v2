@@ -1,8 +1,9 @@
 export const dynamic = "force-dynamic"
 import { NextRequest, NextResponse } from "next/server"
-import { getDb } from "@/lib/db"
+import { getDb, primeDb } from "@/lib/db"
 
 export async function GET(req: NextRequest, { params }: { params: { token: string } }) {
+  await primeDb()
   const db = getDb()
   const session = db.prepare(
     "SELECT ss.*, d.name as document_name, d.file_path, d.transaction_id FROM signing_sessions ss JOIN documents d ON ss.document_id = d.id WHERE ss.token = ?"

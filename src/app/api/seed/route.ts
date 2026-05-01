@@ -1,9 +1,10 @@
 export const dynamic = "force-dynamic"
 import { NextResponse } from "next/server"
-import { getDb, createTransaction, addParty, updateMilestone } from "@/lib/db"
+import { getDb, createTransaction, addParty, updateMilestone, primeDb } from "@/lib/db"
 
 // POST /api/seed — populate demo data (idempotent)
 export async function POST() {
+  await primeDb()
   try {
     const db = getDb()
     const count = (db.prepare("SELECT COUNT(*) as c FROM transactions").get() as any).c

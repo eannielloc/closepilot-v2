@@ -1,9 +1,10 @@
 export const dynamic = "force-dynamic"
 import { NextRequest, NextResponse } from "next/server"
-import { listTransactions, createTransaction, createDraftTransaction } from "@/lib/db"
+import { listTransactions, createTransaction, createDraftTransaction, primeDb } from "@/lib/db"
 
 // GET /api/transactions — list all
 export async function GET() {
+  await primeDb()
   try {
     const transactions = listTransactions()
     return NextResponse.json(transactions)
@@ -15,6 +16,7 @@ export async function GET() {
 
 // POST /api/transactions — create new (full or draft)
 export async function POST(req: NextRequest) {
+  await primeDb()
   try {
     const body = await req.json()
     const { propertyAddress, buyerName, sellerName, purchasePrice, effectiveDate, closingDate, contractType, initialDeposit, additionalDeposit, financingType, mode } = body

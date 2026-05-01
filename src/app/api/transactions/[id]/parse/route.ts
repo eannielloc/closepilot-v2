@@ -1,13 +1,13 @@
 export const dynamic = "force-dynamic"
 import { NextRequest, NextResponse } from "next/server"
-import path from "path"
-import fs from "fs"
-import { getDb } from "@/lib/db"
+import { getDb, primeDb } from "@/lib/db"
 import { mockParseContract } from "@/lib/mock-parser"
 import { parseContractPdf } from "@/lib/ai-parser"
+import { materialize } from "@/lib/file-store"
 
 // POST /api/transactions/[id]/parse — parse most-recent uploaded PDF for this transaction
 export async function POST(_req: NextRequest, { params }: { params: { id: string } }) {
+  await primeDb()
   const db = getDb()
   const doc = db
     .prepare(
@@ -19,11 +19,15 @@ export async function POST(_req: NextRequest, { params }: { params: { id: string
     return NextResponse.json(mockParseContract())
   }
 
-  const fullPath = path.join(process.cwd(), "uploads", doc.file_path)
-  if (!fs.existsSync(fullPath)) {
+  let materialized: { path: string; cleanup?: () => void } | null = null
+  try {
+    materialized = await materialize(doc.file_path)
+    const parsed = await parseContractPdf(materialized.path, { fallbackOnError: true })
+    return NextResponse.json(parsed)
+  } catch (err) {
+    console.error("[parse] failed:", err)
     return NextResponse.json(mockParseContract())
+  } finally {
+    materialized?.cleanup?.()
   }
-
-  const parsed = await parseContractPdf(fullPath, { fallbackOnError: true })
-  return NextResponse.json(parsed)
 }

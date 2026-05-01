@@ -1,13 +1,13 @@
 export const dynamic = "force-dynamic"
 import { NextRequest, NextResponse } from "next/server"
-import { getDb, populateTransactionFromParse } from "@/lib/db"
+import { getDb, populateTransactionFromParse, primeDb } from "@/lib/db"
 import { mockParseSignedDocument } from "@/lib/mock-parser"
 import { parseSignedDocumentPdf } from "@/lib/ai-parser"
 import { v4 as uuid } from "uuid"
-import path from "path"
-import fs from "fs"
+import { materialize } from "@/lib/file-store"
 
 export async function POST(req: NextRequest, { params }: { params: { token: string } }) {
+  await primeDb()
   const db = getDb()
   const session = db.prepare(
     "SELECT ss.*, d.transaction_id, d.id as doc_id, d.name as doc_name FROM signing_sessions ss JOIN documents d ON ss.document_id = d.id WHERE ss.token = ?"
@@ -54,17 +54,22 @@ export async function POST(req: NextRequest, { params }: { params: { token: stri
         "SELECT signer_role, signer_name, signer_email FROM signing_sessions WHERE document_id = ?"
       ).all(session.doc_id) as Array<{ signer_role: string; signer_name: string; signer_email: string }>
 
-      // Try real Claude parse if the PDF is on disk and key is set; fall back to mock otherwise
+      // Try real Claude parse if a key is set and the PDF can be materialized; fall back to mock otherwise.
       const docRow = db.prepare("SELECT file_path FROM documents WHERE id = ?").get(session.doc_id) as { file_path: string | null } | undefined
-      let aiParsed: any
+      let aiParsed: unknown = null
       if (docRow?.file_path) {
-        const fullPath = path.join(process.cwd(), "uploads", docRow.file_path)
-        if (fs.existsSync(fullPath)) {
-          aiParsed = await parseSignedDocumentPdf(fullPath, session.doc_name, allSessions, { fallbackOnError: true })
+        let mat: { path: string; cleanup?: () => void } | null = null
+        try {
+          mat = await materialize(docRow.file_path)
+          aiParsed = await parseSignedDocumentPdf(mat.path, session.doc_name, allSessions, { fallbackOnError: true })
+        } catch (err) {
+          console.error("[sign/complete] AI parse failed:", err)
+        } finally {
+          mat?.cleanup?.()
         }
       }
       if (!aiParsed) aiParsed = mockParseSignedDocument(session.doc_name, allSessions)
-      populateTransactionFromParse(session.transaction_id, aiParsed)
+      populateTransactionFromParse(session.transaction_id, aiParsed as Parameters<typeof populateTransactionFromParse>[1])
       parsed = true
 
       db.prepare("UPDATE documents SET status = 'parsed' WHERE id = ?").run(session.doc_id)

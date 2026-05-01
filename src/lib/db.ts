@@ -13,6 +13,15 @@ export async function primeDb(): Promise<void> {
   if (_downloadPrimed) return
   await ensureDownloaded()
   _downloadPrimed = true
+  // Diagnostic: log row counts after restore so we can verify in Vercel logs.
+  try {
+    const db = getDb()
+    const u = (db.prepare("SELECT COUNT(*) as c FROM users").get() as { c: number }).c
+    const t = (db.prepare("SELECT COUNT(*) as c FROM transactions").get() as { c: number }).c
+    console.log(`[db] post-prime: users=${u} transactions=${t}`)
+  } catch (err) {
+    console.error("[db] post-prime count failed:", err)
+  }
 }
 
 // Auto-flag DB as dirty after any write statement, so the Blob sync

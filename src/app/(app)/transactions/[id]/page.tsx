@@ -6,6 +6,7 @@ import { PartyList } from "@/components/party-list"
 import { DocumentList } from "@/components/document-list"
 import { NotesSection } from "@/components/notes-section"
 import { TaskChecklist } from "@/components/task-checklist"
+import { ClauseReviewCard } from "@/components/clause-review-card"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -15,7 +16,8 @@ import { formatCurrency, formatDate, daysUntil, statusBadge } from "@/lib/utils"
 import {
   ArrowLeft, Calendar, DollarSign, FileText, MapPin, Loader2,
   CheckCircle2, Upload, Trash2, PenTool, Send, ExternalLink,
-  Clock, ListChecks, MessageSquare, Users, Share2, Copy
+  Clock, ListChecks, MessageSquare, Users, Share2, Copy,
+  Sparkles, CalendarDays, Download
 } from "lucide-react"
 
 function DetailSkeleton() {
@@ -138,15 +140,26 @@ export default function TransactionDetailPage({ params }: { params: { id: string
             }
           </p>
         </div>
-        <Button
-          variant="outline"
-          size="sm"
-          className="gap-1.5 shrink-0"
-          onClick={copyClientLink}
-        >
-          {copiedLink ? <CheckCircle2 className="h-3.5 w-3.5 text-green-500" /> : <Share2 className="h-3.5 w-3.5" />}
-          {copiedLink ? "Copied!" : "Share"}
-        </Button>
+        <div className="flex items-center gap-2 shrink-0">
+          <a
+            href={`/api/transactions/${params.id}/calendar.ics`}
+            download
+            className="inline-flex items-center gap-1.5 rounded-md border bg-background px-3 h-9 text-sm font-medium hover:bg-accent transition-colors"
+            title="Download all deadlines to your calendar"
+          >
+            <CalendarDays className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">Add to Calendar</span>
+          </a>
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-1.5"
+            onClick={copyClientLink}
+          >
+            {copiedLink ? <CheckCircle2 className="h-3.5 w-3.5 text-green-500" /> : <Share2 className="h-3.5 w-3.5" />}
+            {copiedLink ? "Copied!" : "Share"}
+          </Button>
+        </div>
       </div>
 
       {/* Key info cards — hidden for draft, shown for active */}
@@ -223,6 +236,9 @@ export default function TransactionDetailPage({ params }: { params: { id: string
               </TabsTrigger>
               <TabsTrigger value="notes" className="gap-1.5 text-xs">
                 <MessageSquare className="h-3.5 w-3.5" /> Notes
+              </TabsTrigger>
+              <TabsTrigger value="review" className="gap-1.5 text-xs">
+                <Sparkles className="h-3.5 w-3.5" /> Review
               </TabsTrigger>
             </TabsList>
 
@@ -305,6 +321,10 @@ export default function TransactionDetailPage({ params }: { params: { id: string
                   <NotesSection transactionId={params.id} />
                 </CardContent>
               </Card>
+            </TabsContent>
+
+            <TabsContent value="review">
+              <ClauseReviewCard transactionId={params.id} />
             </TabsContent>
           </Tabs>
 

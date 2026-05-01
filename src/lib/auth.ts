@@ -1,4 +1,4 @@
-import { getDb } from "./db"
+import { getDb, primeDb } from "./db"
 import { v4 as uuid } from "uuid"
 import bcrypt from "bcryptjs"
 import { cookies } from "next/headers"
@@ -14,6 +14,7 @@ export async function createUser(data: {
   licenseNumber?: string
   brokerage?: string
 }) {
+  await primeDb()
   const db = getDb()
   const existing = db.prepare("SELECT id FROM users WHERE email = ?").get(data.email)
   if (existing) {
@@ -39,6 +40,7 @@ export async function createUser(data: {
 }
 
 export async function verifyLogin(email: string, password: string) {
+  await primeDb()
   const db = getDb()
   const user = db.prepare("SELECT * FROM users WHERE email = ?").get(email.toLowerCase()) as any
   if (!user) return null
@@ -47,6 +49,7 @@ export async function verifyLogin(email: string, password: string) {
 }
 
 export async function createSession(userId: string) {
+  await primeDb()
   const db = getDb()
   const sessionId = uuid()
   const expiresAt = new Date(Date.now() + SESSION_DAYS * 24 * 60 * 60 * 1000).toISOString()
@@ -74,6 +77,7 @@ export async function getSession() {
   const sessionId = cookieStore.get(SESSION_COOKIE)?.value
   if (!sessionId) return null
 
+  await primeDb()
   const db = getDb()
   const session = db.prepare(
     "SELECT s.*, u.email, u.name FROM sessions s JOIN users u ON s.user_id = u.id WHERE s.id = ? AND s.expires_at > datetime('now')"

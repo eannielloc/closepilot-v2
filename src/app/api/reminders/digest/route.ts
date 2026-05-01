@@ -1,10 +1,11 @@
 export const dynamic = "force-dynamic"
 import { NextResponse } from "next/server"
-import { getDb } from "@/lib/db"
+import { getDb, primeDb } from "@/lib/db"
 import { sendTemplatedEmail } from "@/lib/email"
 
 // GET /api/reminders/digest — send weekly digest to all opted-in users
 export async function GET() {
+  await primeDb()
   const db = getDb()
   const results: Array<{ user: string; status: string }> = []
 
