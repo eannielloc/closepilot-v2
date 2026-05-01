@@ -2,9 +2,10 @@
 
 import { useEffect, useState } from "react"
 import { formatCurrency, formatDate, daysUntil } from "@/lib/utils"
+import { explainMilestone } from "@/lib/milestone-explanations"
 import {
   Zap, CheckCircle2, Circle, Clock, Calendar, DollarSign,
-  FileText, AlertTriangle, MapPin, Shield
+  FileText, AlertTriangle, MapPin, Shield, ChevronDown, ChevronUp, Info
 } from "lucide-react"
 
 function ProgressRing({ progress }: { progress: number }) {
@@ -22,6 +23,52 @@ function ProgressRing({ progress }: { progress: number }) {
         </linearGradient>
       </defs>
     </svg>
+  )
+}
+
+function PortalMilestoneRow({ milestone }: { milestone: any }) {
+  const [open, setOpen] = useState(false)
+  const isOverdue = milestone.status === "pending" && new Date(milestone.dueDate) < new Date()
+  const explanation = explainMilestone(milestone.name, milestone.type)
+
+  return (
+    <div className={`rounded-lg border ${isOverdue ? "border-red-200 bg-red-50/30" : milestone.status === "completed" ? "border-green-200 bg-green-50/30" : "border-gray-200 bg-white"}`}>
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="w-full flex items-center gap-3 p-3 text-left"
+      >
+        {milestone.status === "completed" ? (
+          <CheckCircle2 className="h-5 w-5 text-green-500 shrink-0" />
+        ) : isOverdue ? (
+          <AlertTriangle className="h-5 w-5 text-red-500 shrink-0" />
+        ) : (
+          <Circle className="h-5 w-5 text-gray-300 shrink-0" />
+        )}
+        <div className="flex-1 min-w-0">
+          <p className={`text-sm ${milestone.status === "completed" ? "text-gray-400 line-through" : isOverdue ? "text-red-700 font-medium" : "font-medium"}`}>
+            {milestone.name}
+          </p>
+          <p className="text-xs text-gray-500 mt-0.5">{formatDate(milestone.dueDate)}</p>
+        </div>
+        {open ? <ChevronUp className="h-4 w-4 text-gray-400 shrink-0" /> : <ChevronDown className="h-4 w-4 text-gray-400 shrink-0" />}
+      </button>
+      {open && (
+        <div className="px-3 pb-3 -mt-1 space-y-2">
+          <div className="rounded-md bg-blue-50 border border-blue-100 p-3">
+            <div className="flex items-start gap-2">
+              <Info className="h-3.5 w-3.5 text-blue-600 shrink-0 mt-0.5" />
+              <div className="space-y-1.5">
+                <p className="text-[11px] font-semibold text-blue-900 uppercase tracking-wide">What this is</p>
+                <p className="text-xs text-blue-900 leading-relaxed">{explanation.whatItIs}</p>
+                <p className="text-[11px] font-semibold text-blue-900 uppercase tracking-wide pt-1">What you should do</p>
+                <p className="text-xs text-blue-900 leading-relaxed">{explanation.whatYouNeedToDo}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
   )
 }
 
@@ -128,27 +175,10 @@ export default function ClientPortalPage({ params }: { params: { id: string } })
         {/* Timeline */}
         <div className="bg-white rounded-2xl border p-6">
           <h3 className="font-semibold mb-4">Timeline</h3>
-          <div className="space-y-3">
-            {(tx.milestones || []).map((ms: any) => {
-              const isOverdue = ms.status === "pending" && new Date(ms.dueDate) < new Date()
-              return (
-                <div key={ms.id} className="flex items-center gap-3">
-                  {ms.status === "completed" ? (
-                    <CheckCircle2 className="h-5 w-5 text-green-500 shrink-0" />
-                  ) : isOverdue ? (
-                    <AlertTriangle className="h-5 w-5 text-red-500 shrink-0" />
-                  ) : (
-                    <Circle className="h-5 w-5 text-gray-200 shrink-0" />
-                  )}
-                  <div className="flex-1">
-                    <p className={`text-sm ${ms.status === "completed" ? "text-gray-400 line-through" : isOverdue ? "text-red-700 font-medium" : "font-medium"}`}>
-                      {ms.name}
-                    </p>
-                  </div>
-                  <span className="text-xs text-gray-400">{formatDate(ms.dueDate)}</span>
-                </div>
-              )
-            })}
+          <div className="space-y-2">
+            {(tx.milestones || []).map((ms: any) => (
+              <PortalMilestoneRow key={ms.id} milestone={ms} />
+            ))}
           </div>
         </div>
 

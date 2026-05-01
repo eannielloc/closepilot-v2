@@ -79,21 +79,20 @@ export default function LandingPage() {
             </h1>
 
             <p className="text-lg md:text-xl text-muted-foreground mb-10 max-w-2xl mx-auto leading-relaxed text-balance">
-              Upload your purchase agreement. ClosePilot extracts every date, party, and deadline — then manages the entire transaction for{" "}
-              <span className="font-semibold text-foreground">$99</span> instead of{" "}
-              <span className="line-through">$400</span>.
+              Upload your purchase agreement. ClosePilot extracts every date, party, and deadline — then keeps your <span className="font-semibold text-foreground">agent, buyers, sellers, lender, title, and attorney</span> on the same page from contract to close. <span className="font-semibold text-foreground">$99</span> instead of{" "}
+              <span className="line-through">$400</span> for a human TC.
             </p>
 
             {/* CTAs */}
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-              <Link href="/transactions/new">
+              <Link href="/register">
                 <Button size="lg" className="h-12 px-8 text-base gap-2 shadow-lg shadow-primary/25">
-                  Upload Your First Contract <ArrowRight className="h-4 w-4" />
+                  Start Your First Deal Free <ArrowRight className="h-4 w-4" />
                 </Button>
               </Link>
-              <Link href="/dashboard">
+              <Link href="/demo">
                 <Button size="lg" variant="outline" className="h-12 px-8 text-base">
-                  See Live Demo
+                  See a Live Sample Deal
                 </Button>
               </Link>
             </div>
@@ -453,7 +452,7 @@ export default function LandingPage() {
                 <li><a href="#features" className="hover:text-foreground transition-colors">Features</a></li>
                 <li><a href="#pricing" className="hover:text-foreground transition-colors">Pricing</a></li>
                 <li><a href="#how-it-works" className="hover:text-foreground transition-colors">How It Works</a></li>
-                <li><Link href="/dashboard" className="hover:text-foreground transition-colors">Demo</Link></li>
+                <li><Link href="/demo" className="hover:text-foreground transition-colors">Demo</Link></li>
               </ul>
             </div>
             <div>
@@ -466,8 +465,8 @@ export default function LandingPage() {
             <div>
               <h4 className="text-sm font-semibold mb-3">Legal</h4>
               <ul className="space-y-2 text-sm text-muted-foreground">
-                <li><a href="#" className="hover:text-foreground transition-colors">Privacy</a></li>
-                <li><a href="#" className="hover:text-foreground transition-colors">Terms</a></li>
+                <li><Link href="/privacy" className="hover:text-foreground transition-colors">Privacy</Link></li>
+                <li><Link href="/terms" className="hover:text-foreground transition-colors">Terms</Link></li>
               </ul>
             </div>
           </div>
