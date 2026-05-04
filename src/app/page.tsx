@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button"
 import {
   Zap, ArrowRight, CheckCircle, Sparkles, Users, Building, Eye, Home,
   Upload, MessageSquare, Calendar, FileText, Shield, Bell,
-  Star, Clock, ChevronDown
+  Star, Clock, ChevronDown, Briefcase
 } from "lucide-react"
 
 function Logo() {
@@ -437,6 +437,37 @@ export default function LandingPage() {
             <span className="font-semibold text-foreground">Mary R.</span> · Hartford, CT
             <span className="mx-2">·</span>
             <span>14 transactions on ClosePilot</span>
+          </div>
+        </div>
+      </section>
+
+      {/* Security / trust */}
+      <section className="py-16 md:py-20 bg-white">
+        <div className="container max-w-5xl">
+          <div className="text-center mb-10">
+            <p className="text-xs font-semibold text-primary uppercase tracking-wider mb-3">Built for the trust your clients expect</p>
+            <h2 className="text-2xl md:text-3xl font-bold tracking-tight mb-3 text-balance">
+              Real estate data. Real estate-grade security.
+            </h2>
+            <p className="text-muted-foreground max-w-2xl mx-auto text-sm md:text-base">
+              Contracts have SSNs, financial details, signatures. We treat them like that — encryption at rest and in transit, no third-party tracking, no AI training on your client data.
+            </p>
+          </div>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {[
+              { icon: Shield, title: "Encrypted at rest", desc: "All documents and database content encrypted. Files served via short-lived signed URLs." },
+              { icon: Bell, title: "Audit trail per deal", desc: "Every action logged: who uploaded, viewed, completed, messaged. Useful for broker compliance." },
+              { icon: Briefcase, title: "Your data is yours", desc: "Export anytime. Delete anytime. We don't sell, share, or train on it." },
+              { icon: Star, title: "Built by an agent", desc: "Designed by someone who's done 100+ closes — not a generic SaaS team. Bug? We hear about it that day." },
+            ].map((t) => (
+              <div key={t.title} className="rounded-2xl border bg-white p-5 hover:shadow-sm transition-shadow">
+                <div className="inline-flex items-center justify-center w-9 h-9 rounded-lg bg-primary/[0.08] mb-3">
+                  <t.icon className="h-4.5 w-4.5 text-primary" />
+                </div>
+                <p className="text-sm font-semibold mb-1.5">{t.title}</p>
+                <p className="text-xs text-muted-foreground leading-relaxed">{t.desc}</p>
+              </div>
+            ))}
           </div>
         </div>
       </section>

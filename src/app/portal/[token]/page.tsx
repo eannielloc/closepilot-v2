@@ -197,6 +197,36 @@ function PortalView({ data, token, onRefresh }: { data: PortalData; token: strin
           <StatCard icon={Clock} label={daysToClose >= 0 ? "Days to Close" : "Days past"} value={Math.abs(daysToClose).toString()} highlight={daysToClose >= 0 && daysToClose <= 7} />
         </div>
 
+        {/* Celebratory progress for buyers/sellers */}
+        {!isVendor(party.role) && totalMs > 0 && (() => {
+          const pct = Math.round((completedMs / totalMs) * 100)
+          const headline =
+            pct === 100 ? "🎉 You closed!" :
+            pct >= 80 ? "Almost home — final stretch" :
+            pct >= 50 ? "Halfway there" :
+            pct >= 25 ? "Off the ground" :
+            "You're just getting started"
+          return (
+            <div className="rounded-2xl border-2 border-blue-200 bg-gradient-to-br from-blue-50 via-white to-indigo-50/60 p-5 md:p-6">
+              <div className="flex items-baseline justify-between mb-3 flex-wrap gap-1">
+                <h2 className="text-base md:text-lg font-bold">{headline}</h2>
+                <div className="text-2xl md:text-3xl font-black bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+                  {pct}%
+                </div>
+              </div>
+              <div className="h-3 bg-white/70 rounded-full overflow-hidden border border-blue-100 mb-2 shadow-inner">
+                <div
+                  className="h-full bg-gradient-to-r from-blue-500 via-indigo-500 to-emerald-500 transition-all duration-1000 rounded-full"
+                  style={{ width: `${pct}%` }}
+                />
+              </div>
+              <p className="text-xs text-blue-900/70">
+                {completedMs} of {totalMs} milestones complete · {Math.max(0, totalMs - completedMs)} remaining to closing
+              </p>
+            </div>
+          )
+        })()}
+
         {/* What's next */}
         {nextMilestone && (
           <div className="rounded-xl border-2 border-blue-200 bg-blue-50 p-4">
