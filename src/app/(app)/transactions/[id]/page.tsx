@@ -7,6 +7,7 @@ import { DocumentList } from "@/components/document-list"
 import { NotesSection } from "@/components/notes-section"
 import { TaskChecklist } from "@/components/task-checklist"
 import { ClauseReviewCard } from "@/components/clause-review-card"
+import { InvitePartyModal } from "@/components/invite-party-modal"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -52,6 +53,7 @@ export default function TransactionDetailPage({ params }: { params: { id: string
   const [signingLinks, setSigningLinks] = useState<Record<string, any[]>>({})
   const [showShareModal, setShowShareModal] = useState(false)
   const [copiedLink, setCopiedLink] = useState(false)
+  const [showInviteModal, setShowInviteModal] = useState(false)
 
   const fetchTx = async () => {
     try {
@@ -350,7 +352,13 @@ export default function TransactionDetailPage({ params }: { params: { id: string
 
         {/* Sidebar */}
         <div className="space-y-6">
-          <PartyList parties={tx.parties || []} />
+          <PartyList parties={tx.parties || []} onInvite={() => setShowInviteModal(true)} />
+          <InvitePartyModal
+            transactionId={params.id}
+            open={showInviteModal}
+            onClose={() => setShowInviteModal(false)}
+            onCreated={fetchTx}
+          />
 
           {/* Quick document upload card (always visible in sidebar) */}
           <Card>

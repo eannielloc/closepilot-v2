@@ -227,6 +227,55 @@ function initSchema(db: Database.Database) {
     db.exec("ALTER TABLE users ADD COLUMN password_hash TEXT")
   }
 
+  // Add portal_token + invited_at to parties for shareable role-based portals
+  const partyCols = db.prepare("PRAGMA table_info(parties)").all() as any[]
+  if (!partyCols.find((c: any) => c.name === "portal_token")) {
+    db.exec("ALTER TABLE parties ADD COLUMN portal_token TEXT")
+    db.exec("CREATE UNIQUE INDEX IF NOT EXISTS idx_parties_portal_token ON parties(portal_token) WHERE portal_token IS NOT NULL")
+  }
+  if (!partyCols.find((c: any) => c.name === "invited_at")) {
+    db.exec("ALTER TABLE parties ADD COLUMN invited_at TEXT")
+  }
+  if (!partyCols.find((c: any) => c.name === "last_viewed_at")) {
+    db.exec("ALTER TABLE parties ADD COLUMN last_viewed_at TEXT")
+  }
+
+  // Vendor work-tracking: tasks assigned to vendor parties (e.g., inspector
+  // uploads inspection report). Per-deal, per-party.
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS portal_tasks (
+      id TEXT PRIMARY KEY,
+      transaction_id TEXT NOT NULL,
+      party_id TEXT,
+      role TEXT,
+      title TEXT NOT NULL,
+      description TEXT,
+      status TEXT DEFAULT 'pending',
+      due_date TEXT,
+      completed_at TEXT,
+      document_id TEXT,
+      created_at TEXT DEFAULT (datetime('now')),
+      FOREIGN KEY (transaction_id) REFERENCES transactions(id) ON DELETE CASCADE,
+      FOREIGN KEY (party_id) REFERENCES parties(id) ON DELETE SET NULL,
+      FOREIGN KEY (document_id) REFERENCES documents(id) ON DELETE SET NULL
+    )
+  `)
+
+  // Portal messages — light async chat between agent and a specific party.
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS portal_messages (
+      id TEXT PRIMARY KEY,
+      transaction_id TEXT NOT NULL,
+      party_id TEXT,
+      author_role TEXT NOT NULL,
+      author_name TEXT,
+      body TEXT NOT NULL,
+      created_at TEXT DEFAULT (datetime('now')),
+      FOREIGN KEY (transaction_id) REFERENCES transactions(id) ON DELETE CASCADE,
+      FOREIGN KEY (party_id) REFERENCES parties(id) ON DELETE SET NULL
+    )
+  `)
+
   // Seed default user if none exists
   const userCount = db.prepare("SELECT COUNT(*) as c FROM users").get() as any
   if (userCount.c === 0) {
@@ -309,6 +358,57 @@ export function generateCTMilestones(tx: NewTransaction): Array<{
   return milestones
 }
 
+// Default per-role task templates seeded on transaction creation. These
+// appear in the vendor's portal automatically when an agent invites them
+// with the matching role, so the vendor immediately sees what to deliver.
+const ROLE_DEFAULT_TASKS: Record<string, Array<{ title: string; description?: string; daysFromEffective?: number }>> = {
+  lender: [
+    { title: "Confirm receipt of buyer's loan application", daysFromEffective: 1, description: "Acknowledge to the agent that you've received the application and started underwriting." },
+    { title: "Order appraisal", daysFromEffective: 3, description: "Order the appraisal so it lands well before the mortgage commitment deadline." },
+    { title: "Upload pre-approval / commitment letter", daysFromEffective: 14, description: "Upload the loan commitment letter via this portal so the agent and buyer can reference it." },
+  ],
+  inspector: [
+    { title: "Schedule inspection", daysFromEffective: 2, description: "Coordinate with the buyer to lock in a date before the inspection deadline." },
+    { title: "Upload inspection report", daysFromEffective: 11, description: "Upload the full inspection report (PDF) via this portal once complete." },
+  ],
+  title: [
+    { title: "Run title search", daysFromEffective: 7, description: "Pull title and start clearing any liens or clouds." },
+    { title: "Upload title commitment", daysFromEffective: 25, description: "Send the title commitment so the agent and attorney can review." },
+  ],
+  attorney: [
+    { title: "Review contract", daysFromEffective: 1, description: "Review terms and request any amendments before attorney review deadline." },
+    { title: "Coordinate closing", description: "Handle title transfer, deed recording, and closing logistics." },
+  ],
+  appraiser: [
+    { title: "Schedule appraisal visit", daysFromEffective: 5, description: "Coordinate with the lender to schedule and complete the appraisal." },
+    { title: "Upload appraisal report", daysFromEffective: 14, description: "Upload the completed appraisal report." },
+  ],
+  buyer: [
+    { title: "Wire initial earnest money deposit", daysFromEffective: 1, description: "Wire the deposit per the contract. Your agent will provide instructions." },
+    { title: "Apply for mortgage with lender", daysFromEffective: 3, description: "Submit your loan application within the contract window." },
+    { title: "Schedule home inspection", daysFromEffective: 4, description: "Book the inspection ASAP — most inspectors fill up days in advance." },
+    { title: "Confirm homeowner's insurance binder", daysFromEffective: 21, description: "Get a binder in place before lender's commitment deadline." },
+  ],
+  seller: [
+    { title: "Disclose any known property issues", daysFromEffective: 1, description: "Provide property condition disclosure if you haven't already." },
+    { title: "Coordinate move-out date with buyer", description: "Confirm move-out before final walkthrough." },
+    { title: "Cancel utilities effective closing day", daysFromEffective: -7, description: "Schedule disconnects to take effect on closing day." },
+  ],
+}
+
+function seedDefaultTasksForTransaction(txId: string, eff: string): void {
+  const db = getDb()
+  const insert = db.prepare(
+    "INSERT INTO portal_tasks (id, transaction_id, party_id, role, title, description, status, due_date) VALUES (?, ?, NULL, ?, ?, ?, 'pending', ?)"
+  )
+  for (const [role, tasks] of Object.entries(ROLE_DEFAULT_TASKS)) {
+    for (const t of tasks) {
+      const due = t.daysFromEffective !== undefined ? addDays(eff, t.daysFromEffective) : null
+      insert.run(`pt_${uuid().slice(0, 8)}`, txId, role, t.title, t.description ?? null, due)
+    }
+  }
+}
+
 // ─── Draft Transaction (Manual Flow) ─────────────────────────────────
 
 export function createDraftTransaction(propertyAddress: string, agentId?: string) {
@@ -371,6 +471,7 @@ export function populateTransactionFromParse(txId: string, parsed: {
     for (const ms of milestones) {
       insertMs.run(`ms_${uuid().slice(0, 8)}`, txId, ms.name, ms.type, ms.dueDate, ms.status)
     }
+    seedDefaultTasksForTransaction(txId, parsed.effectiveDate)
   }
 
   db.prepare(`INSERT INTO activity_log (id, transaction_id, action, details) VALUES (?, ?, ?, ?)`)
@@ -398,6 +499,10 @@ export function createTransaction(data: NewTransaction) {
     insertMs.run(`ms_${uuid().slice(0, 8)}`, txId, ms.name, ms.type, ms.dueDate, ms.status)
   }
 
+  // Seed role-keyed portal tasks (lender, inspector, etc.) — these become
+  // visible to the relevant party as soon as the agent invites them.
+  seedDefaultTasksForTransaction(txId, data.effectiveDate)
+
   // Log activity
   db.prepare(`INSERT INTO activity_log (id, transaction_id, action, details) VALUES (?, ?, ?, ?)`)
     .run(`al_${uuid().slice(0, 8)}`, txId, "transaction_created", `New transaction: ${data.propertyAddress}`)
@@ -415,7 +520,19 @@ export function getTransaction(id: string) {
   const documents = db.prepare("SELECT * FROM documents WHERE transaction_id = ?").all(id)
   const activity = db.prepare("SELECT * FROM activity_log WHERE transaction_id = ? ORDER BY created_at DESC LIMIT 20").all(id)
 
-  return { ...snakeToCamel(tx), milestones: milestones.map(snakeToCamel), parties: parties.map(snakeToCamel), documents: documents.map(snakeToCamel), activity: activity.map(snakeToCamel) }
+  return {
+    ...snakeToCamel(tx),
+    milestones: milestones.map(snakeToCamel),
+    parties: parties.map(snakeToCamel).map(addPortalUrl),
+    documents: documents.map(snakeToCamel),
+    activity: activity.map(snakeToCamel),
+  }
+}
+
+function addPortalUrl(party: any): any {
+  if (!party?.portalToken) return party
+  const base = process.env.NEXT_PUBLIC_APP_URL || "https://closepilot-v2-production.up.railway.app"
+  return { ...party, portalUrl: `${base}/portal/${party.portalToken}` }
 }
 
 export function listTransactions(agentId?: string) {
@@ -427,7 +544,11 @@ export function listTransactions(agentId?: string) {
   return txs.map((tx: any) => {
     const milestones = db.prepare("SELECT * FROM milestones WHERE transaction_id = ? ORDER BY due_date").all(tx.id)
     const parties = db.prepare("SELECT * FROM parties WHERE transaction_id = ?").all(tx.id)
-    return { ...snakeToCamel(tx), milestones: milestones.map(snakeToCamel), parties: parties.map(snakeToCamel) }
+    return {
+      ...snakeToCamel(tx),
+      milestones: milestones.map(snakeToCamel),
+      parties: parties.map(snakeToCamel).map(addPortalUrl),
+    }
   })
 }
 
