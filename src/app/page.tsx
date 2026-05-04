@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button"
 import {
   Zap, Clock, Shield, DollarSign, ArrowRight, CheckCircle, Star,
   Upload, Calendar, Bell, FileText, Users, ChevronDown, ChevronRight,
-  Sparkles, Timer, TrendingDown, Award
+  Sparkles, Timer, TrendingDown, Award, Building, Eye, Home
 } from "lucide-react"
 
 function Logo() {
@@ -130,6 +130,103 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* Who it's for — role-specific value props */}
+      <section className="py-20 md:py-28">
+        <div className="container max-w-6xl">
+          <div className="text-center mb-14">
+            <p className="text-sm font-semibold text-primary uppercase tracking-wider mb-3">Built for the entire deal team</p>
+            <h2 className="text-3xl md:text-4xl font-bold tracking-tight mb-4 text-balance">One link, one source of truth.<br/>Everyone stays in sync.</h2>
+            <p className="text-muted-foreground max-w-2xl mx-auto">Your agent invites each party — buyer, seller, lender, inspector, attorney, title — and they get their own portal with exactly what they need to do.</p>
+          </div>
+
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-5">
+            {[
+              {
+                icon: Users,
+                color: "from-blue-500 to-indigo-500",
+                bg: "bg-blue-50",
+                tone: "text-blue-700",
+                role: "Real Estate Agents",
+                pitch: "AI parses the contract, builds the timeline, sends reminders, and gives every party a portal — so you stop fielding 'what's next?' calls.",
+                bullets: [
+                  "AI clause review flags risks before going firm",
+                  "Auto-generated CT timelines (deposit, attorney review, mortgage commitment, closing)",
+                  "One-click invites for every vendor and client",
+                  "Activity feed shows when buyers/sellers actually open their portal",
+                ],
+              },
+              {
+                icon: Building,
+                color: "from-amber-500 to-orange-500",
+                bg: "bg-amber-50",
+                tone: "text-amber-700",
+                role: "Vendors (Lender, Title, Attorney, Contractor)",
+                pitch: "Get a magic link, no account needed. See deadlines, drop your deliverables, message the agent — all in one place.",
+                bullets: [
+                  "Pre-populated task list (e.g., 'upload commitment letter')",
+                  "Drag-and-drop deliverables auto-link to the task",
+                  "All deadlines on one page + add to your calendar",
+                  "Direct message thread with the agent",
+                ],
+              },
+              {
+                icon: Eye,
+                color: "from-teal-500 to-emerald-500",
+                bg: "bg-teal-50",
+                tone: "text-teal-700",
+                role: "Inspectors & Appraisers",
+                pitch: "No more chasing emails. The agent invites you, you upload the report, the task auto-completes and the agent's notified.",
+                bullets: [
+                  "See deal context: address, parties, contingency dates",
+                  "Upload report once, everyone sees it instantly",
+                  "Calendar export so the inspection date is on your phone",
+                  "Mobile-friendly portal — fill out from the field",
+                ],
+              },
+              {
+                icon: Home,
+                color: "from-violet-500 to-fuchsia-500",
+                bg: "bg-violet-50",
+                tone: "text-violet-700",
+                role: "Buyers & Sellers",
+                pitch: "See your deal status at a glance with plain-English explanations of every milestone. Know exactly what's next and what to do.",
+                bullets: [
+                  "'What this is + what you need to do' on every deadline",
+                  "Action items: wire deposit, schedule inspection, etc.",
+                  "Message your agent without endless email threads",
+                  "Real-time progress bar to closing",
+                ],
+              },
+            ].map((p) => (
+              <div key={p.role} className="rounded-2xl border bg-white p-6 hover:shadow-md transition-shadow flex flex-col">
+                <div className={`inline-flex items-center justify-center w-11 h-11 rounded-xl ${p.bg} mb-4`}>
+                  <p.icon className={`h-5 w-5 ${p.tone}`} />
+                </div>
+                <h3 className="font-semibold text-base mb-2 leading-tight">{p.role}</h3>
+                <p className="text-sm text-muted-foreground leading-relaxed mb-4 flex-1">{p.pitch}</p>
+                <ul className="space-y-2 mb-5">
+                  {p.bullets.map((b) => (
+                    <li key={b} className="text-xs text-muted-foreground flex gap-2">
+                      <CheckCircle className="h-3.5 w-3.5 text-green-500 mt-0.5 shrink-0" />
+                      <span>{b}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-12 text-center">
+            <Link href="/demo">
+              <Button size="lg" variant="outline" className="gap-2 h-11">
+                See a live sample deal <ArrowRight className="h-4 w-4" />
+              </Button>
+            </Link>
+            <p className="text-xs text-muted-foreground mt-3">No signup. Real CT contract. All four roles previewed.</p>
+          </div>
+        </div>
+      </section>
+
       {/* How it works */}
       <section id="how-it-works" className="py-24 md:py-32">
         <div className="container max-w-5xl">
@@ -244,7 +341,7 @@ export default function LandingPage() {
                   </li>
                 ))}
               </ul>
-              <Link href="/transactions/new" className="block">
+              <Link href="/register" className="block">
                 <Button className="w-full h-11 gap-2">
                   Start Free Trial <ArrowRight className="h-4 w-4" />
                 </Button>

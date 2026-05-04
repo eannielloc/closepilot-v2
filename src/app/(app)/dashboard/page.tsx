@@ -44,10 +44,19 @@ export default function DashboardPage() {
   const [activities, setActivities] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [viewMode, setViewMode] = useState<ViewMode>("cards")
+  const [userName, setUserName] = useState<string>("")
 
   useEffect(() => {
     async function init() {
       try {
+        // load current user for greeting
+        try {
+          const meRes = await fetch("/api/auth/me")
+          if (meRes.ok) {
+            const me = await meRes.json()
+            setUserName(me?.user?.name?.split(" ")[0] || "")
+          }
+        } catch {}
         await fetch("/api/seed", { method: "POST" })
         const res = await fetch("/api/transactions")
         const data = await res.json()
@@ -106,7 +115,9 @@ export default function DashboardPage() {
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">Welcome back, Chris. Here&apos;s your deal overview.</p>
+          <p className="text-sm text-muted-foreground mt-0.5">
+            {userName ? `Welcome back, ${userName}.` : "Welcome back."} Here&apos;s your deal overview.
+          </p>
         </div>
         <div className="flex items-center gap-2">
           <QuickActions />
@@ -194,17 +205,37 @@ export default function DashboardPage() {
           )
         ) : (
           <Card className="border-dashed">
-            <CardContent className="py-16 text-center">
+            <CardContent className="py-12 text-center">
               <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-primary/[0.08] mb-4">
                 <Zap className="h-7 w-7 text-primary" />
               </div>
-              <h3 className="font-semibold mb-1">No transactions yet</h3>
-              <p className="text-sm text-muted-foreground mb-4">Upload your first contract to get started</p>
-              <Link href="/transactions/new">
-                <Button className="gap-2">
-                  <Plus className="h-4 w-4" /> New Transaction
-                </Button>
-              </Link>
+              <h3 className="font-semibold mb-1 text-lg">Let&apos;s set up your first deal</h3>
+              <p className="text-sm text-muted-foreground mb-6 max-w-sm mx-auto">
+                Drop your purchase agreement PDF — we&apos;ll parse the contract, build the timeline, and let you invite buyers, sellers, lenders, inspectors, and attorneys to their own portal.
+              </p>
+              <div className="grid sm:grid-cols-3 gap-3 max-w-2xl mx-auto mb-6 text-left">
+                {[
+                  { n: "1", t: "Upload contract", d: "AI extracts every date, party, and contingency." },
+                  { n: "2", t: "Invite the team", d: "Each party gets a role-specific portal with one click." },
+                  { n: "3", t: "Stay on autopilot", d: "Reminders + task tracking handle the rest." },
+                ].map((s) => (
+                  <div key={s.n} className="rounded-xl border bg-background p-4">
+                    <div className="text-xs font-bold text-primary mb-2">STEP {s.n}</div>
+                    <div className="text-sm font-medium mb-1">{s.t}</div>
+                    <div className="text-xs text-muted-foreground leading-relaxed">{s.d}</div>
+                  </div>
+                ))}
+              </div>
+              <div className="flex items-center justify-center gap-2">
+                <Link href="/transactions/new">
+                  <Button className="gap-2">
+                    <Plus className="h-4 w-4" /> New Transaction
+                  </Button>
+                </Link>
+                <Link href="/demo">
+                  <Button variant="outline" className="gap-2">See sample first</Button>
+                </Link>
+              </div>
             </CardContent>
           </Card>
         )}
