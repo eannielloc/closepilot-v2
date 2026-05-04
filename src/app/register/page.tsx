@@ -44,7 +44,8 @@ export default function RegisterPage() {
         return
       }
 
-      router.push("/dashboard")
+      // Session is set in the register response — go straight to onboarding
+      router.push("/onboarding")
     } catch {
       setError("Something went wrong")
       setLoading(false)
