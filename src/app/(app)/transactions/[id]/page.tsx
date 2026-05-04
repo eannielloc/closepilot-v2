@@ -52,7 +52,6 @@ export default function TransactionDetailPage({ params }: { params: { id: string
   const [uploading, setUploading] = useState(false)
   const [signingLinks, setSigningLinks] = useState<Record<string, any[]>>({})
   const [showShareModal, setShowShareModal] = useState(false)
-  const [copiedLink, setCopiedLink] = useState(false)
   const [showInviteModal, setShowInviteModal] = useState(false)
 
   const fetchTx = async () => {
@@ -98,12 +97,8 @@ export default function TransactionDetailPage({ params }: { params: { id: string
     fetchTx()
   }
 
-  const copyClientLink = () => {
-    const link = `${window.location.origin}/portal/${params.id}`
-    navigator.clipboard.writeText(link)
-    setCopiedLink(true)
-    setTimeout(() => setCopiedLink(false), 2000)
-  }
+  // Removed: legacy /portal/[tx-id] sharing. Use the per-party invite
+  // flow (PartyList -> Invite modal) which mints unique tokens per party.
 
   if (loading) return <DetailSkeleton />
   if (!tx) return (
@@ -153,13 +148,13 @@ export default function TransactionDetailPage({ params }: { params: { id: string
             <span className="hidden sm:inline">Add to Calendar</span>
           </a>
           <Button
-            variant="outline"
+            variant="default"
             size="sm"
             className="gap-1.5"
-            onClick={copyClientLink}
+            onClick={() => setShowInviteModal(true)}
           >
-            {copiedLink ? <CheckCircle2 className="h-3.5 w-3.5 text-green-500" /> : <Share2 className="h-3.5 w-3.5" />}
-            {copiedLink ? "Copied!" : "Share"}
+            <Users className="h-3.5 w-3.5" />
+            Invite Party
           </Button>
         </div>
       </div>
