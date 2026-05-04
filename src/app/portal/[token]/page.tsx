@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react"
 import Link from "next/link"
+import { Button } from "@/components/ui/button"
 import { formatCurrency, formatDate } from "@/lib/utils"
 import { explainMilestone } from "@/lib/milestone-explanations"
 import {
@@ -274,9 +275,48 @@ function PortalView({ data, token, onRefresh }: { data: PortalData; token: strin
           </div>
         </section>
 
+        {/* Viral CTA — different copy for vendor vs client */}
+        {isVendor(party.role) ? (
+          <section className="rounded-2xl border-2 border-blue-100 bg-gradient-to-br from-blue-50 via-white to-indigo-50 p-5 md:p-6">
+            <div className="flex items-start gap-3 md:gap-4">
+              <div className="w-10 h-10 rounded-xl bg-primary text-white flex items-center justify-center shrink-0">
+                <Zap className="h-5 w-5" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <h3 className="font-semibold text-base mb-1">Working with another agent?</h3>
+                <p className="text-sm text-gray-600 leading-relaxed mb-3">
+                  Invite them to ClosePilot — they get their first 30 days free, and you get this same clean workspace on every deal you do together. No more chasing emails.
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  <Link href="/register">
+                    <Button size="sm" className="gap-1.5">
+                      <Zap className="h-3.5 w-3.5" /> Get your own ClosePilot
+                    </Button>
+                  </Link>
+                  <Link href="/demo">
+                    <Button size="sm" variant="outline" className="gap-1.5">
+                      How it works
+                    </Button>
+                  </Link>
+                </div>
+              </div>
+            </div>
+          </section>
+        ) : (
+          <section className="rounded-2xl border bg-white p-5 md:p-6 text-center">
+            <p className="text-sm font-medium mb-1">Closing soon? You'll want this on every deal.</p>
+            <p className="text-xs text-gray-500 mb-3">If your next agent isn't on ClosePilot yet, share this with them.</p>
+            <Link href="/register">
+              <Button size="sm" variant="outline" className="gap-1.5">
+                <Zap className="h-3.5 w-3.5" /> Tell my agent about ClosePilot
+              </Button>
+            </Link>
+          </section>
+        )}
+
         {/* Footer */}
         <footer className="text-center text-xs text-gray-400 py-8">
-          <p>Powered by ClosePilot · AI Transaction Coordinator</p>
+          <p>Powered by ClosePilot · The shared workspace for every real estate deal</p>
           <p className="mt-1">This portal is yours alone — please don't share the link.</p>
         </footer>
       </main>
