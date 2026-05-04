@@ -10,7 +10,7 @@ import { QuickActions } from "@/components/quick-actions"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Plus, Zap, Clock, LayoutGrid, Kanban, List } from "lucide-react"
+import { Plus, Zap, Clock, LayoutGrid, Kanban, CheckCircle2 } from "lucide-react"
 import Link from "next/link"
 
 type ViewMode = "cards" | "pipeline"
@@ -132,39 +132,65 @@ export default function DashboardPage() {
         totalVolume={totalVolume}
       />
 
-      {/* Urgent deadlines */}
-      {urgentDeadlines.length > 0 && (
-        <Card className="border-amber-200 bg-amber-50/30">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base flex items-center gap-2">
-              <Clock className="h-4 w-4 text-amber-600" />
-              Upcoming Deadlines
-              <span className="text-xs font-normal text-muted-foreground ml-1">Next 7 days</span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            {urgentDeadlines.slice(0, 5).map((d: any) => (
-              <DeadlineAlert key={d.id} name={`${d.name} — ${d.propertyAddress}`} dueDate={d.dueDate} status={d.status} />
-            ))}
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Overdue Alert */}
-      {allUpcoming.filter((m: any) => new Date(m.dueDate) < new Date()).length > 0 && (
-        <Card className="border-red-200 bg-red-50/30">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base flex items-center gap-2 text-red-700">
-              ⚠️ Overdue Milestones
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            {allUpcoming.filter((m: any) => new Date(m.dueDate) < new Date()).slice(0, 5).map((d: any) => (
-              <DeadlineAlert key={d.id} name={`${d.name} — ${d.propertyAddress}`} dueDate={d.dueDate} status="overdue" />
-            ))}
-          </CardContent>
-        </Card>
-      )}
+      {/* Action panel — overdue + this week, deep-linked */}
+      {(() => {
+        const overdue = allUpcoming.filter((m: any) => new Date(m.dueDate) < new Date())
+        const thisWeek = urgentDeadlines.filter((m: any) => new Date(m.dueDate) >= new Date())
+        const all = [...overdue, ...thisWeek].slice(0, 6)
+        if (all.length === 0) {
+          return (
+            <Card className="border-emerald-200 bg-gradient-to-br from-emerald-50/60 to-white">
+              <CardContent className="py-5 px-5 flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center shrink-0">
+                  <CheckCircle2 className="h-5 w-5 text-emerald-600" />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold">All clear for the next 7 days 🎉</p>
+                  <p className="text-xs text-muted-foreground">No deadlines need your attention. Good time to check in with active buyers/sellers.</p>
+                </div>
+              </CardContent>
+            </Card>
+          )
+        }
+        return (
+          <Card className="border-amber-200">
+            <CardHeader className="pb-3 flex flex-row items-center justify-between gap-2">
+              <CardTitle className="text-base flex items-center gap-2">
+                <Clock className="h-4 w-4 text-amber-600" />
+                Action needed
+                <span className="text-xs font-normal text-muted-foreground ml-0.5">
+                  {overdue.length > 0 && <span className="text-red-700 font-medium">{overdue.length} overdue</span>}
+                  {overdue.length > 0 && thisWeek.length > 0 && " · "}
+                  {thisWeek.length > 0 && <span>{thisWeek.length} this week</span>}
+                </span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="pt-0 space-y-1.5">
+              {all.map((d: any) => {
+                const isOverdue = new Date(d.dueDate) < new Date()
+                const days = Math.ceil((new Date(d.dueDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
+                const dayLabel = isOverdue ? `${Math.abs(days)}d overdue` : days === 0 ? "Today" : days === 1 ? "Tomorrow" : `${days} days`
+                return (
+                  <Link
+                    key={d.id}
+                    href={`/transactions/${d.transactionId}`}
+                    className={`flex items-center gap-3 p-2.5 rounded-lg border transition-all hover:shadow-sm ${
+                      isOverdue ? "border-red-200 bg-red-50/40 hover:bg-red-50/70" : "border-amber-200 bg-amber-50/30 hover:bg-amber-50/60"
+                    }`}
+                  >
+                    <div className={`w-1.5 self-stretch rounded-full ${isOverdue ? "bg-red-500" : "bg-amber-500"}`} />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium truncate">{d.name}</p>
+                      <p className="text-xs text-muted-foreground truncate">{d.propertyAddress}</p>
+                    </div>
+                    <span className={`text-xs font-medium shrink-0 ${isOverdue ? "text-red-700" : "text-amber-700"}`}>{dayLabel}</span>
+                  </Link>
+                )
+              })}
+            </CardContent>
+          </Card>
+        )
+      })()}
 
       {/* View Toggle + Transactions */}
       <div>
